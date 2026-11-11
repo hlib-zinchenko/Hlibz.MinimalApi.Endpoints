@@ -14,7 +14,7 @@ documented from what the endpoint *is* rather than from what you remembered to w
 
 | Package | What it gives you |
 |---|---|
-| `Hlibz.MinimalApi.Endpoints` | `IEndpoint<TGroup, TResponse>`, `IEndpointGroup`, `app.MapEndpoints(assemblies)`, per-endpoint opt-ins, group and endpoint conventions, `EndpointDiscovery`. No dependencies beyond ASP.NET Core. |
+| `Hlibz.MinimalApi.Endpoints` | `IEndpoint<TGroup, TResponse>`, `IEndpointGroup`, `app.MapEndpoints(assemblies)`, per-endpoint opt-ins, group and endpoint conventions, `EndpointDiscovery`, and the source generator that lists the endpoints at compile time. No dependencies beyond ASP.NET Core. |
 | `Hlibz.MinimalApi.Endpoints.FluentValidation` | `options.AddFluentValidation()`: every handler parameter with a registered `IValidator<T>` is validated before the handler runs. |
 
 Targets .NET 8, 9, 10 and 11.
@@ -26,8 +26,9 @@ extension per feature, still leaves the same five lines on every route: the name
 response type, the error codes, the 401/403 when it needs a user, the 429 when it's rate
 limited. This package keeps the REPR shape (one class per endpoint) while staying plain
 minimal APIs: the handler is the same delegate you'd pass to `MapGet`, with the same
-parameter binding, filters and `TypedResults`. No base class, no custom pipeline, no
-source generator to learn.
+parameter binding, filters and `TypedResults`. No base class, no custom pipeline. A source
+generator lists the endpoints while your project compiles, but there is nothing to learn about
+it: it ships inside the package and needs no setup.
 
 ## Quick start
 
@@ -92,7 +93,8 @@ app.MapEndpoints(typeof(Program).Assembly);
 `IEndpoint<TGroup>` maps the endpoint into `TGroup`; `IEndpoint<TGroup, TResponse>` also
 documents the success response. The route name is the class name minus a trailing
 `Endpoint`. Endpoints and groups are created once, at startup, with their parameterless
-constructor, so they hold no state: dependencies come in as handler parameters.
+constructor (public or internal), so they hold no state: dependencies come in as handler
+parameters.
 
 ## The group
 
@@ -187,8 +189,31 @@ bool hasAdmin = EndpointDiscovery.Discover(assemblies)
     .Any(group => group.Group is IAdminEndpointGroup);
 ```
 
-Startup fails with a clear message for an endpoint that implements `IEndpoint` without a
-group, names two groups or two response types, or a type without a parameterless constructor.
+## How endpoints are found
+
+Nothing is scanned at runtime. The package's source generator runs on every project that
+references it, directly or through another project or package, and writes the list of that
+assembly's endpoints into the assembly: each concrete, non-generic class implementing
+`IEndpoint<TGroup>` (directly or through a base class), its group and response type, and a
+`new` for each. `MapEndpoints` and `EndpointDiscovery` only read that list, so discovery adds
+no reflection scan to startup and is trimming- and Native AOT-safe. Abstract and open generic
+classes are bases for endpoints, not endpoints, and are left out.
+
+An assembly passed to `MapEndpoints` that wasn't compiled with the generator fails at startup
+with a message saying so.
+
+## Build errors
+
+An endpoint the generator can't list fails the build, pointing at the class:
+
+| Id | Cause |
+|---|---|
+| `HMAE001` | Implements `IEndpoint` directly, without `IEndpoint<TGroup>`. |
+| `HMAE002` | Names more than one group. |
+| `HMAE003` | Names more than one response type. |
+| `HMAE004` | The endpoint or its group has no public or internal parameterless constructor. |
+| `HMAE005` | The group is an interface or an abstract class. |
+| `HMAE006` | The endpoint, its group or its response type is private (or nested in a private type). |
 
 ## FluentValidation
 
@@ -236,8 +261,10 @@ app.MapEndpoints(assemblies, options => options
 
 ## Limitations
 
-* Discovery uses reflection and the handlers go through `RequestDelegateFactory`, so it is not
-  trimming- or Native AOT-safe. A source generator could replace the scan later.
+* Discovery is trimming- and Native AOT-safe, but mapping isn't: each `Handler` is a `Delegate`
+  bound through `RequestDelegateFactory`, exactly like a `MapGet` call that ASP.NET Core's
+  Request Delegate Generator can't see. `MapEndpoints` carries `RequiresUnreferencedCode` and
+  `RequiresDynamicCode` to say so.
 * Endpoints are singletons created at startup: no constructor injection.
 
 ## Samples

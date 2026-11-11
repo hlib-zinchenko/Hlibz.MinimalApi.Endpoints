@@ -4,8 +4,9 @@ namespace Hlibz.MinimalApi.Endpoints;
 /// One minimal API endpoint, in a class of its own. Don't implement this interface directly:
 /// implement <see cref="IEndpoint{TGroup}"/> or <see cref="IEndpoint{TGroup, TResponse}"/>, which
 /// tie the endpoint to its <see cref="IEndpointGroup"/>.
-/// <c>MapEndpoints</c> finds every implementation in the assemblies it is given, creates it with
-/// its parameterless constructor and maps <see cref="Handler"/> into the group's route group.
+/// The package's source generator lists every implementation when the assembly compiles, and
+/// <c>MapEndpoints</c> creates each one with its parameterless constructor (public or internal)
+/// and maps <see cref="Handler"/> into the group's route group.
 /// </summary>
 /// <remarks>
 /// Endpoints are created once, at startup, so keep them stateless: the handler's dependencies come
@@ -91,7 +92,7 @@ public interface IEndpoint
 [SuppressMessage(
     "Major Code Smell",
     "S2326:Unused type parameters should be removed",
-    Justification = "Read via reflection to map the endpoint into its route group.")]
+    Justification = "Read by the source generator to map the endpoint into its route group.")]
 public interface IEndpoint<TGroup> : IEndpoint
     where TGroup : IEndpointGroup
 {
@@ -106,7 +107,7 @@ public interface IEndpoint<TGroup> : IEndpoint
 [SuppressMessage(
     "Major Code Smell",
     "S2326:Unused type parameters should be removed",
-    Justification = "Read via reflection to document the endpoint's success response.")]
+    Justification = "Read by the source generator to document the endpoint's success response.")]
 public interface IEndpoint<TGroup, TResponse> : IEndpoint<TGroup>
     where TGroup : IEndpointGroup
 {

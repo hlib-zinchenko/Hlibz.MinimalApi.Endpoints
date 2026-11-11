@@ -1,0 +1,20 @@
+<Project>
+
+  <!--
+      MapEndpoints reads the endpoint list the package's source generator writes into every
+      assembly holding endpoints. NuGet hands a package's analyzers only to the projects that
+      reference it directly, so a project that gets this package through another one (an API
+      module referencing a shared project that references the package) would compile without the
+      generator. This adds it there, once.
+  -->
+  <Target Name="_HlibzMinimalApiEndpointsAddGenerator"
+          AfterTargets="ResolvePackageDependenciesForBuild;ResolveNuGetPackageAssets">
+    <ItemGroup>
+      <_HlibzMinimalApiEndpointsGenerator Include="@(Analyzer)"
+                                          Condition="'%(Filename)' == 'Hlibz.MinimalApi.Endpoints.Generators'" />
+      <Analyzer Include="$(MSBuildThisFileDirectory)../analyzers/dotnet/cs/Hlibz.MinimalApi.Endpoints.Generators.dll"
+                Condition="'@(_HlibzMinimalApiEndpointsGenerator)' == ''" />
+    </ItemGroup>
+  </Target>
+
+</Project>

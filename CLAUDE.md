@@ -7,13 +7,25 @@ Guidance for Claude Code when working in this repository.
 Two NuGet packages released together from one tag:
 
 - `src/Hlibz.MinimalApi.Endpoints`: `IEndpoint` / `IEndpoint<TGroup>` /
-  `IEndpoint<TGroup, TResponse>`, `IEndpointGroup`, `EndpointDiscovery` (reflection scan →
-  `EndpointGroupDescriptor`/`EndpointDescriptor`), `MapEndpoints` (`EndpointRouteBuilderExtensions`),
+  `IEndpoint<TGroup, TResponse>`, `IEndpointGroup`, `EndpointDiscovery` (reads the generated
+  `EndpointManifestAttribute` of each assembly → `EndpointGroupDescriptor`/`EndpointDescriptor`;
+  no reflection scan), `MapEndpoints` (`EndpointRouteBuilderExtensions`),
   `EndpointMappingOptions` (error schema, naming, include filter, group/endpoint conventions),
   `EndpointContext`/`EndpointGroupContext`. Only the ASP.NET Core shared framework.
   The 401/403/429 responses are documented by a `Finally` convention on the endpoint's final
   metadata (`Internal/ResponseDocumentation`), so they follow whatever set authorization or rate
   limiting; keep it that way rather than checking the interface members.
+- `src/Hlibz.MinimalApi.Endpoints.Generators`: the incremental source generator (netstandard2.0,
+  Roslyn 4.8, never packed on its own). It writes one `EndpointManifest_<AssemblyName>` per
+  compilation that references the library, and reports unusable endpoints as `HMAE001`-`HMAE006`
+  build errors (`Diagnostics.cs`, `AnalyzerReleases.Unshipped.md`, the README's "Build errors").
+  The library packs it under `analyzers/dotnet/cs` plus `buildTransitive/*.targets`, which adds
+  it to projects that get the package indirectly (NuGet withholds analyzers there). Tests,
+  samples and anything else in this repo reference it as `OutputItemType="Analyzer"`; its own
+  tests (`tests/...Generators.Tests`, net11.0 only) compile sources in memory and load the result.
+  `IsAotCompatible` is on for the library: discovery is AOT-safe, `MapEndpoints` is annotated
+  `RequiresUnreferencedCode`/`RequiresDynamicCode` because handlers go through
+  `RequestDelegateFactory`.
 - `src/Hlibz.MinimalApi.Endpoints.FluentValidation`: `options.AddFluentValidation()`, an endpoint
   convention that attaches `ValidationEndpointFilter<T>` per handler parameter type with a
   registered `IValidator<T>` (checked with `IServiceProviderIsService` at startup, resolved from

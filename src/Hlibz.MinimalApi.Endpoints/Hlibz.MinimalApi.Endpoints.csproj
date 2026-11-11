@@ -2,12 +2,34 @@
 
   <PropertyGroup Label="NuGet metadata">
     <PackageId>Hlibz.MinimalApi.Endpoints</PackageId>
-    <Description>One class per minimal API endpoint, discovered and mapped for you: implement IEndpoint&lt;TGroup, TResponse&gt; (method, route, handler) and IEndpointGroup (prefix, tags), call app.MapEndpoints(assemblies), and every endpoint is mapped into its group with its name, its 200 response type, its error responses (401/403 whenever the endpoint ends up requiring authorization, 429 whenever it is rate limited, 413 for uploads), and per-endpoint opt-ins for authorization, rate limiting, file uploads and file downloads. Your own error schema (ProblemDetails by default), group and endpoint conventions for app-wide rules, and an extension point for request validation (see Hlibz.MinimalApi.Endpoints.FluentValidation).</Description>
-    <PackageTags>aspnetcore;minimal-api;endpoints;vertical-slice;repr;openapi;routing</PackageTags>
+    <Description>One class per minimal API endpoint, discovered and mapped for you: implement IEndpoint&lt;TGroup, TResponse&gt; (method, route, handler) and IEndpointGroup (prefix, tags), call app.MapEndpoints(assemblies), and every endpoint is mapped into its group with its name, its 200 response type, its error responses (401/403 whenever the endpoint ends up requiring authorization, 429 whenever it is rate limited, 413 for uploads), and per-endpoint opt-ins for authorization, rate limiting, file uploads and file downloads. Endpoints are listed at compile time by a source generator, so there is no assembly scan at startup and a broken endpoint is a build error. Your own error schema (ProblemDetails by default), group and endpoint conventions for app-wide rules, and an extension point for request validation (see Hlibz.MinimalApi.Endpoints.FluentValidation).</Description>
+    <PackageTags>aspnetcore;minimal-api;endpoints;vertical-slice;repr;openapi;routing;source-generator</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!--
+      The source generator ships inside this package (analyzers/dotnet/cs), plus a buildTransitive
+      target that hands it to projects referencing the package indirectly. Built first, never a
+      dependency of its own.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Hlibz.MinimalApi.Endpoints.Generators\Hlibz.MinimalApi.Endpoints.Generators.csproj"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+    <None Include="..\Hlibz.MinimalApi.Endpoints.Generators\bin\$(Configuration)\netstandard2.0\Hlibz.MinimalApi.Endpoints.Generators.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+    <None Include="buildTransitive\Hlibz.MinimalApi.Endpoints.targets"
+          Pack="true"
+          PackagePath="buildTransitive" />
   </ItemGroup>
 
   <ItemGroup>

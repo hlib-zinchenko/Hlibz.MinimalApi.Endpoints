@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+      The source generator behind EndpointDiscovery: lists every endpoint of the assembly it runs
+      on as an EndpointManifestAttribute, and reports an endpoint it can't use as a build error.
+      Not a package of its own: Hlibz.MinimalApi.Endpoints ships it under analyzers/dotnet/cs.
+      netstandard2.0 and Roslyn 4.8 (the .NET 8 SDK's), so every SDK the library supports loads it.
+  -->
+  <PropertyGroup>
+    <TargetFrameworks></TargetFrameworks>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Hlibz.MinimalApi.Endpoints.Generators.Tests" />
+  </ItemGroup>
+
+</Project>

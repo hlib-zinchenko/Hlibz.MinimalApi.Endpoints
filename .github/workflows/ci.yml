@@ -53,3 +53,8 @@ jobs:
             grep -q "<icon>icon.png</icon>" package.nuspec
           done
           test "$(ls ./artifacts/*.nupkg | wc -l)" -eq 2
+          # The source generator ships inside the main package, with the target that hands it
+          # to projects referencing the package indirectly.
+          unzip -l ./artifacts/Hlibz.MinimalApi.Endpoints.[0-9]*.nupkg > contents.txt
+          grep -qE " analyzers/dotnet/cs/Hlibz\.MinimalApi\.Endpoints\.Generators\.dll$" contents.txt
+          grep -qE " buildTransitive/Hlibz\.MinimalApi\.Endpoints\.targets$" contents.txt

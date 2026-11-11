@@ -45,6 +45,10 @@ via `FileContentType`. Errors use `ProblemDetails` unless you set your own
 (`options.UseErrorResponse<TError>()`); app-wide rules go in group and endpoint conventions
 (`options.ConfigureGroups<IAdminEndpointGroup>(...)`).
 
+Endpoints are listed at compile time by a source generator that ships inside the package:
+no assembly scan at startup, and an endpoint that can't be mapped (no group, two groups, no
+parameterless constructor, ...) is a build error rather than a startup failure.
+
 Request validation: [Hlibz.MinimalApi.Endpoints.FluentValidation](https://www.nuget.org/packages/Hlibz.MinimalApi.Endpoints.FluentValidation).
 
 Full documentation and a sample: [https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints).

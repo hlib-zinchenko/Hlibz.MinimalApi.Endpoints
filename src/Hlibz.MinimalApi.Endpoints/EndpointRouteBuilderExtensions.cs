@@ -10,12 +10,22 @@ namespace Hlibz.MinimalApi.Endpoints;
 public static class EndpointRouteBuilderExtensions
 {
     /// <summary>
+    /// Why mapping isn't trimming- or AOT-safe, as a warning on the caller: the same as a
+    /// <c>MapGet</c> given a delegate that ASP.NET Core's Request Delegate Generator can't see.
+    /// </summary>
+    private const string HandlerBindingWarning =
+        "Each endpoint's Handler is bound through RequestDelegateFactory, like a MapMethods call "
+        + "with a Delegate: it reflects on the handler's parameters at startup.";
+
+    /// <summary>
     /// Maps every endpoint in <paramref name="assembly"/> into its route group.
     /// </summary>
     /// <param name="app">The app to map the endpoints on.</param>
     /// <param name="assembly">The assembly to scan.</param>
     /// <param name="configure">Configures the mapping; the defaults when omitted.</param>
     /// <returns>The same <paramref name="app"/>, for chaining.</returns>
+    [RequiresUnreferencedCode(HandlerBindingWarning)]
+    [RequiresDynamicCode(HandlerBindingWarning)]
     public static IEndpointRouteBuilder MapEndpoints(
         this IEndpointRouteBuilder app,
         Assembly assembly,
@@ -39,6 +49,8 @@ public static class EndpointRouteBuilderExtensions
     /// <exception cref="InvalidOperationException">
     /// An endpoint or group can't be used, or a convention rejected one.
     /// </exception>
+    [RequiresUnreferencedCode(HandlerBindingWarning)]
+    [RequiresDynamicCode(HandlerBindingWarning)]
     public static IEndpointRouteBuilder MapEndpoints(
         this IEndpointRouteBuilder app,
         IEnumerable<Assembly> assemblies,
@@ -97,6 +109,8 @@ public static class EndpointRouteBuilderExtensions
         return builder;
     }
 
+    [RequiresUnreferencedCode(HandlerBindingWarning)]
+    [RequiresDynamicCode(HandlerBindingWarning)]
     private static void MapEndpoint(
         IEndpointRouteBuilder app,
         RouteGroupBuilder groupBuilder,

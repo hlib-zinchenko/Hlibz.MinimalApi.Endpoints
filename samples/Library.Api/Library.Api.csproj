@@ -9,4 +9,11 @@
     <ProjectReference Include="..\..\src\Hlibz.MinimalApi.Endpoints.FluentValidation\Hlibz.MinimalApi.Endpoints.FluentValidation.csproj" />
   </ItemGroup>
 
+  <!-- The source generator that lists the endpoints; in your own app the package brings it. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Hlibz.MinimalApi.Endpoints.Generators\Hlibz.MinimalApi.Endpoints.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
 </Project>

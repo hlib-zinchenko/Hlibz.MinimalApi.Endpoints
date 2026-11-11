@@ -1,8 +1,5 @@
 using Hlibz.MinimalApi.Endpoints.Tests.Fixtures.Admin;
-using Hlibz.MinimalApi.Endpoints.Tests.Fixtures.Direct;
-using Hlibz.MinimalApi.Endpoints.Tests.Fixtures.GroupWithoutConstructor;
 using Hlibz.MinimalApi.Endpoints.Tests.Fixtures.Orders;
-using Hlibz.MinimalApi.Endpoints.Tests.Fixtures.TwoGroups;
 
 namespace Hlibz.MinimalApi.Endpoints.Tests;
 
@@ -38,30 +35,23 @@ public sealed class EndpointDiscoveryTests
     }
 
     [Fact]
-    public void Discover_WithEndpointImplementingIEndpointDirectly_Throws()
+    public void Discover_WithAssemblyWithoutEndpointList_Throws()
     {
+        // The library itself isn't compiled with the generator, so it has no endpoint list.
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => Discover(typeof(DirectEndpoint).Namespace!));
+            () => EndpointDiscovery.Discover([typeof(EndpointDiscovery).Assembly]));
 
-        Assert.Contains("implements IEndpoint directly", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("has no endpoint list", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Discover_WithEndpointNamingTwoGroups_Throws()
+    public void Discover_WithEndpointsNotIncluded_CreatesNeitherThemNorTheirGroups()
     {
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => Discover(typeof(TwoGroupsEndpoint).Namespace!));
+        IReadOnlyList<EndpointGroupDescriptor> groups = EndpointDiscovery.Discover(
+            [typeof(TestApp).Assembly],
+            _ => false);
 
-        Assert.Contains("more than one endpoint group", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Discover_WithGroupWithoutParameterlessConstructor_Throws()
-    {
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => Discover(typeof(ListThingsEndpoint).Namespace!));
-
-        Assert.Contains("no parameterless constructor", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(groups);
     }
 
     [Fact]

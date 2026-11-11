@@ -5,6 +5,11 @@ namespace Hlibz.MinimalApi.Endpoints;
 /// anything. <c>MapEndpoints</c> maps exactly what this returns, so the app can use it for
 /// anything that must agree with the mapped routes, such as one OpenAPI document per group kind.
 /// </summary>
+/// <remarks>
+/// Nothing is scanned at runtime: the package's source generator lists every endpoint of an
+/// assembly when it compiles (an <see cref="EndpointManifestAttribute"/>), and reports an endpoint
+/// it can't use as a build error. Discovery only reads that list, so it is trimming-safe.
+/// </remarks>
 public static class EndpointDiscovery
 {
     /// <summary>
@@ -12,12 +17,12 @@ public static class EndpointDiscovery
     /// it under the <see cref="IEndpointGroup"/> it names. A group is found through its endpoints,
     /// so it may live in any assembly, and a group with no endpoint is left out.
     /// </summary>
-    /// <param name="assemblies">The assemblies to scan.</param>
+    /// <param name="assemblies">The assemblies to read.</param>
     /// <param name="includeEndpoint">Which endpoint types to keep; all of them when omitted.</param>
     /// <returns>The groups, in the order their first endpoint was found.</returns>
     /// <exception cref="InvalidOperationException">
-    /// An endpoint or group can't be used: it implements <see cref="IEndpoint"/> without a group,
-    /// names more than one group or response type, or has no parameterless constructor.
+    /// An assembly wasn't compiled with the package's source generator, so it has no endpoint
+    /// list to read.
     /// </exception>
     public static IReadOnlyList<EndpointGroupDescriptor> Discover(
         IEnumerable<Assembly> assemblies,
@@ -25,24 +30,28 @@ public static class EndpointDiscovery
     {
         ArgumentNullException.ThrowIfNull(assemblies);
 
-        List<EndpointDescriptor> endpoints =
+        List<EndpointRegistration> registrations =
         [
             .. assemblies
                 .Distinct()
-                .SelectMany(assembly => assembly.GetTypes())
-                .Where(type => type is { IsClass: true, IsAbstract: false }
-                               && !type.ContainsGenericParameters
-                               && typeof(IEndpoint).IsAssignableFrom(type))
-                .Where(type => includeEndpoint?.Invoke(type) ?? true)
-                .Select(Describe),
+                .SelectMany(Manifest)
+                .Where(registration => includeEndpoint?.Invoke(registration.EndpointType) ?? true),
         ];
 
         Dictionary<Type, IEndpointGroup> groups = [];
-        foreach (Type groupType in endpoints
-                     .Select(endpoint => endpoint.GroupType)
-                     .Where(groupType => !groups.ContainsKey(groupType)))
+        List<EndpointDescriptor> endpoints = new(registrations.Count);
+        foreach (EndpointRegistration registration in registrations)
         {
-            groups[groupType] = Create<IEndpointGroup>(groupType);
+            if (!groups.ContainsKey(registration.GroupType))
+            {
+                groups[registration.GroupType] = registration.CreateGroup();
+            }
+
+            endpoints.Add(new EndpointDescriptor(
+                registration.EndpointType,
+                registration.CreateEndpoint(),
+                registration.GroupType,
+                registration.ResponseType));
         }
 
         return
@@ -54,67 +63,11 @@ public static class EndpointDiscovery
         ];
     }
 
-    private static EndpointDescriptor Describe(Type endpointType)
-    {
-        Type[] interfaces = endpointType.GetInterfaces();
-
-        Type[] groupTypes = GenericArguments(interfaces, typeof(IEndpoint<>), 0);
-        Type groupType = groupTypes switch
-        {
-            [Type single] => single,
-            [] => throw new InvalidOperationException(
-                $"{endpointType.FullName} implements IEndpoint directly; implement "
-                + "IEndpoint<TGroup> or IEndpoint<TGroup, TResponse> instead."),
-            _ => throw new InvalidOperationException(
-                $"{endpointType.FullName} names more than one endpoint group: "
-                + string.Join(", ", groupTypes.Select(type => type.Name)) + "."),
-        };
-
-        Type[] responseTypes = GenericArguments(interfaces, typeof(IEndpoint<,>), 1);
-        Type? responseType = responseTypes switch
-        {
-            [] => null,
-            [Type single] => single,
-            _ => throw new InvalidOperationException(
-                $"{endpointType.FullName} names more than one response type: "
-                + string.Join(", ", responseTypes.Select(type => type.Name)) + "."),
-        };
-
-        return new EndpointDescriptor(
-            endpointType,
-            Create<IEndpoint>(endpointType),
-            groupType,
-            responseType);
-    }
-
-    private static Type[] GenericArguments(Type[] interfaces, Type definition, int position) =>
-    [
-        .. interfaces
-            .Where(type => type.IsGenericType && type.GetGenericTypeDefinition() == definition)
-            .Select(type => type.GetGenericArguments()[position])
-            .Distinct(),
-    ];
-
-    private static T Create<T>(Type type)
-    {
-        if (type.IsAbstract || type.IsInterface)
-        {
-            throw new InvalidOperationException(
-                $"{type.FullName} is abstract; endpoints and endpoint groups must be concrete "
-                + "classes.");
-        }
-
-        try
-        {
-            return (T)Activator.CreateInstance(type, nonPublic: true)!;
-        }
-        catch (MissingMethodException exception)
-        {
-            throw new InvalidOperationException(
-                $"{type.FullName} has no parameterless constructor; endpoints and endpoint "
-                + "groups are created once at startup, so their dependencies belong in the "
-                + "handler's parameters.",
-                exception);
-        }
-    }
+    private static IReadOnlyList<EndpointRegistration> Manifest(Assembly assembly) =>
+        assembly.GetCustomAttribute<EndpointManifestAttribute>()?.Endpoints
+        ?? throw new InvalidOperationException(
+            $"{assembly.GetName().Name} has no endpoint list: the Hlibz.MinimalApi.Endpoints "
+            + "source generator didn't run when it was compiled. Reference the "
+            + "Hlibz.MinimalApi.Endpoints package from that project, and don't exclude its "
+            + "analyzers.");
 }

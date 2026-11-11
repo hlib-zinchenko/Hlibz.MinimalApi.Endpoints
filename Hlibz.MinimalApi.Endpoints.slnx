@@ -5,9 +5,11 @@
   <Folder Name="/src/">
     <Project Path="src/Hlibz.MinimalApi.Endpoints.FluentValidation/Hlibz.MinimalApi.Endpoints.FluentValidation.csproj" />
     <Project Path="src/Hlibz.MinimalApi.Endpoints/Hlibz.MinimalApi.Endpoints.csproj" />
+    <Project Path="src/Hlibz.MinimalApi.Endpoints.Generators/Hlibz.MinimalApi.Endpoints.Generators.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Hlibz.MinimalApi.Endpoints.FluentValidation.Tests/Hlibz.MinimalApi.Endpoints.FluentValidation.Tests.csproj" />
+    <Project Path="tests/Hlibz.MinimalApi.Endpoints.Generators.Tests/Hlibz.MinimalApi.Endpoints.Generators.Tests.csproj" />
     <Project Path="tests/Hlibz.MinimalApi.Endpoints.Tests/Hlibz.MinimalApi.Endpoints.Tests.csproj" />
   </Folder>
 </Solution>

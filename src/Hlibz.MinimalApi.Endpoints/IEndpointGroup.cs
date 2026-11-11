@@ -3,7 +3,8 @@ namespace Hlibz.MinimalApi.Endpoints;
 /// <summary>
 /// A route group: the prefix, OpenAPI tags and shared rules of the endpoints that name it in
 /// <see cref="IEndpoint{TGroup}"/>. <c>MapEndpoints</c> creates it with its parameterless
-/// constructor and maps it once, with <c>MapGroup</c>.
+/// constructor (public, or internal to the endpoints' assembly) and maps it once, with
+/// <c>MapGroup</c>.
 /// </summary>
 public interface IEndpointGroup
 {
