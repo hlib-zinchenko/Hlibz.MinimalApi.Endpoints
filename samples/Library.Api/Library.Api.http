@@ -1,0 +1,48 @@
+@host = http://localhost:5190
+
+### The OpenAPI document: every response below is documented in it.
+GET {{host}}/openapi/v1.json
+
+### 200, the catalog.
+GET {{host}}/api/books
+
+### 400, validation problem: the author is over 50 characters.
+GET {{host}}/api/books?author=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+### 404, problem details.
+GET {{host}}/api/books/99
+
+### 401: members only.
+POST {{host}}/api/books
+Content-Type: application/json
+
+{ "title": "Solaris", "author": "Stanislaw Lem" }
+
+### 400, validation problem: empty title.
+POST {{host}}/api/books
+X-User: alice
+X-Role: member
+Content-Type: application/json
+
+{ "title": "", "author": "Stanislaw Lem" }
+
+### 201, created.
+POST {{host}}/api/books
+X-User: alice
+X-Role: member
+Content-Type: application/json
+
+{ "title": "Solaris", "author": "Stanislaw Lem" }
+
+### 200, a CSV file.
+GET {{host}}/api/books/export
+
+### 403: a member is not an admin.
+DELETE {{host}}/api/admin/books/1
+X-User: alice
+X-Role: member
+
+### 204, deleted.
+DELETE {{host}}/api/admin/books/1
+X-User: bob
+X-Role: admin

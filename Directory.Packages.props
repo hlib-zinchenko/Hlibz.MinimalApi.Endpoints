@@ -1,0 +1,35 @@
+<Project>
+    <PropertyGroup>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    </PropertyGroup>
+    <ItemGroup>
+        <!--
+            The minimum Hlibz.MinimalApi.Endpoints.FluentValidation supports, not the latest:
+            packed as a ">= 11.0.0" dependency, so consumers pick any newer FluentValidation
+            themselves, and the tests run against this minimum. Raise it only when the add-on
+            needs a newer API (Dependabot ignores it).
+        -->
+        <PackageVersion Include="FluentValidation" Version="11.0.0" />
+        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+        <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" />
+        <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+        <PackageVersion Include="xunit.v3" Version="4.0.3" />
+    </ItemGroup>
+
+    <!-- Test-only: an in-memory server per ASP.NET Core major, matching each target framework. -->
+    <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.34" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.23" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.14" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="11.0.0" />
+        <!-- Samples only (net11.0): the OpenAPI document showing what the endpoints document. -->
+        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
+    </ItemGroup>
+</Project>

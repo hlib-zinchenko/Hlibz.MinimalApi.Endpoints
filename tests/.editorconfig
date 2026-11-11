@@ -1,0 +1,4 @@
+# Fixture files group the endpoints of one scenario under one namespace, named for the scenario
+# rather than their first type.
+[**/Fixtures/*.cs]
+dotnet_diagnostic.SA1649.severity = none

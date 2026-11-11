@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Label="NuGet metadata">
+    <PackageId>Hlibz.MinimalApi.Endpoints.FluentValidation</PackageId>
+    <Description>Automatic FluentValidation for Hlibz.MinimalApi.Endpoints: options.AddFluentValidation() attaches a validation filter to every endpoint whose handler takes a parameter with an IValidator&lt;T&gt; registered, and documents its 400. Nothing to opt into per endpoint. The failure is a validation problem by default, or whatever result your API returns (e.g. Hlibz.Results' result.ToErrorResult().ToHttpResult()). Validators resolve per request, so any lifetime works. Works with FluentValidation 11.0.0 and later.</Description>
+    <PackageTags>aspnetcore;minimal-api;endpoints;fluentvalidation;validation;endpoint-filter</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="FluentValidation" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hlibz.MinimalApi.Endpoints\Hlibz.MinimalApi.Endpoints.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Hlibz.MinimalApi.Endpoints.FluentValidation.Tests" />
+  </ItemGroup>
+
+</Project>

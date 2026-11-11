@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Hlibz.MinimalApi.Endpoints.FluentValidation\Hlibz.MinimalApi.Endpoints.FluentValidation.csproj" />
+  </ItemGroup>
+
+</Project>

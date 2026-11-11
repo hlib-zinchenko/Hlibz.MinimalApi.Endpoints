@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- In your own app: PackageReference Include="Hlibz.MinimalApi.Endpoints.FluentValidation". -->
+    <ProjectReference Include="..\..\src\Hlibz.MinimalApi.Endpoints.FluentValidation\Hlibz.MinimalApi.Endpoints.FluentValidation.csproj" />
+  </ItemGroup>
+
+</Project>
