@@ -23,6 +23,7 @@ public interface IEndpoint
     /// Gets the route, relative to the group's <see cref="IEndpointGroup.Prefix"/>:
     /// <see cref="string.Empty"/> for the group root, or e.g. <c>"{id}"</c>.
     /// </summary>
+    [StringSyntax("Route")]
     string Route { get; }
 
     /// <summary>

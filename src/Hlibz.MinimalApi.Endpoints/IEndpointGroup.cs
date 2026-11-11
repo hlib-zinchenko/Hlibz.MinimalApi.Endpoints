@@ -10,6 +10,7 @@ public interface IEndpointGroup
     /// <summary>
     /// Gets the route prefix of every endpoint in the group, e.g. <c>"api/orders"</c>.
     /// </summary>
+    [StringSyntax("Route")]
     string Prefix { get; }
 
     /// <summary>
