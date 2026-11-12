@@ -9,9 +9,13 @@ namespace Hlibz.MinimalApi.Endpoints.Generators;
 /// The group type, fully qualified; empty when it can't be listed.
 /// </param>
 /// <param name="ResponseTypeName">The success response type, fully qualified, or null.</param>
+/// <param name="Description">
+/// The endpoint's XML <c>&lt;summary&gt;</c> as CommonMark, or null when it has none.
+/// </param>
 /// <param name="Diagnostics">Why the endpoint can't be listed; empty when it can.</param>
 internal sealed record EndpointModel(
     string TypeName,
     string GroupTypeName,
     string? ResponseTypeName,
+    string? Description,
     EquatableArray<DiagnosticInfo> Diagnostics);

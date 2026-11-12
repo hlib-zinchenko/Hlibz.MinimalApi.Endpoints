@@ -10,11 +10,17 @@ namespace Hlibz.MinimalApi.Endpoints;
 /// The success response named in <see cref="IEndpoint{TGroup, TResponse}"/>, or
 /// <see langword="null"/>.
 /// </param>
+/// <param name="Description">
+/// The endpoint type's XML <c>&lt;summary&gt;</c> as CommonMark, read from its source when it
+/// compiled, or <see langword="null"/> when it has none. <c>MapEndpoints</c> uses it as the
+/// operation description (<see cref="EndpointMappingOptions.DescribeEndpointsFromSummaries"/>).
+/// </param>
 public sealed record EndpointDescriptor(
     Type EndpointType,
     IEndpoint Endpoint,
     Type GroupType,
-    Type? ResponseType);
+    Type? ResponseType,
+    string? Description = null);
 
 /// <summary>
 /// A route group found by <see cref="EndpointDiscovery"/>, with its endpoints.

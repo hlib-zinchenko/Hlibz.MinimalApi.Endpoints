@@ -30,32 +30,19 @@ internal sealed class AdminReportsEndpointGroup : IEndpointGroup
 
 internal sealed class ListUsersEndpoint : IEndpoint<AdminUsersEndpointGroup>
 {
-    public HttpMethod Method => HttpMethod.Get;
-
-    public string Route => string.Empty;
-
-    public Delegate Handler => () => Results.Ok();
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet(string.Empty, () => Results.Ok());
 }
 
 internal sealed class PingUsersEndpoint : IEndpoint<AdminUsersEndpointGroup>
 {
-    public HttpMethod Method => HttpMethod.Get;
-
-    public string Route => "ping";
-
-    public Delegate Handler => () => Results.Ok();
-
-    public void Configure(RouteHandlerBuilder builder)
-    {
-        builder.AllowAnonymous();
-    }
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet("ping", () => Results.Ok())
+            .AllowAnonymous();
 }
 
 internal sealed class GetReportEndpoint : IEndpoint<AdminReportsEndpointGroup>
 {
-    public HttpMethod Method => HttpMethod.Get;
-
-    public string Route => "{id}";
-
-    public Delegate Handler => (string id) => Results.Ok(id);
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet("{id}", (string id) => Results.Ok(id));
 }

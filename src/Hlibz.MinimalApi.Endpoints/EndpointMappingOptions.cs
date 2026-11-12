@@ -12,8 +12,10 @@ public sealed class EndpointMappingOptions
 
     /// <summary>
     /// Gets or sets the body type every documented error response carries (the endpoint's
-    /// <see cref="IEndpoint.ProducesErrors"/>, and the automatic <c>401</c>/<c>403</c>/<c>429</c>/
-    /// <c>413</c>), or <see langword="null"/> to document error status codes without a body.
+    /// <see cref="EndpointResponseExtensions.ProducesErrors"/>, the <c>413</c> of
+    /// <see cref="EndpointResponseExtensions.AcceptsUpload"/>, and the automatic
+    /// <c>401</c>/<c>403</c>/<c>429</c>), or <see langword="null"/> to document error status
+    /// codes without a body.
     /// Defaults to <see cref="ProblemDetails"/>; <see cref="UseErrorResponse{TError}"/> sets your
     /// own.
     /// </summary>
@@ -53,6 +55,15 @@ public sealed class EndpointMappingOptions
     public bool DocumentRateLimitResponses { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether each endpoint type's XML <c>&lt;summary&gt;</c>
+    /// becomes its OpenAPI operation description, unless something else (the endpoint's
+    /// <see cref="IEndpoint.Map"/>, its group, a convention or an attribute on the handler) set
+    /// one. The source generator reads the summary from the source when the endpoint compiles,
+    /// so no documentation file is needed at runtime. Defaults to <see langword="true"/>.
+    /// </summary>
+    public bool DescribeEndpointsFromSummaries { get; set; } = true;
+
+    /// <summary>
     /// Gets the conventions applied to every route group, in order, after the group's own
     /// members and <see cref="IEndpointGroup.Configure"/>. A convention may throw to reject a
     /// group at startup.
@@ -61,8 +72,8 @@ public sealed class EndpointMappingOptions
         new List<Action<EndpointGroupContext>>();
 
     /// <summary>
-    /// Gets the conventions applied to every endpoint, in order, after the endpoint's own members
-    /// and <see cref="IEndpoint.Configure"/>. A convention may throw to reject an endpoint at
+    /// Gets the conventions applied to every endpoint, in order, after the endpoint's own
+    /// <see cref="IEndpoint.Map"/> and its name. A convention may throw to reject an endpoint at
     /// startup.
     /// </summary>
     public IList<Action<EndpointContext>> EndpointConventions { get; } =

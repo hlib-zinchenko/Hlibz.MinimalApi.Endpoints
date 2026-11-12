@@ -37,5 +37,7 @@
         <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="11.0.0" />
         <!-- Samples only (net11.0): the OpenAPI document showing what the endpoints document. -->
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
+        <!-- Samples only: a ReDoc page rendering that document, at /api-docs. -->
+        <PackageVersion Include="Hlibz.Redoc.AspNetCore" Version="2.3.0" />
     </ItemGroup>
 </Project>

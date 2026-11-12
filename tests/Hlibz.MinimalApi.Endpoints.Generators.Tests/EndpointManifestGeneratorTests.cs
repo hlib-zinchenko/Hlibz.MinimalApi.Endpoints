@@ -25,16 +25,14 @@ public sealed class EndpointManifestGeneratorTests
         GeneratorRun run = GeneratorRun.Of(Groups + """
             internal sealed class GetOrderEndpoint : IEndpoint<OrdersGroup, OrderDto>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => "{id:int}";
-                public Delegate Handler => (int id) => Results.Ok(new OrderDto(id));
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("{id:int}", (int id) => Results.Ok(new OrderDto(id)));
             }
 
             internal sealed class PingOrdersEndpoint : IEndpoint<OrdersGroup>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => "ping";
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("ping", () => Results.Ok());
             }
             """);
 
@@ -49,7 +47,6 @@ public sealed class EndpointManifestGeneratorTests
         Assert.Equal(
             ["App.OrderDto", null],
             group.Endpoints.Select(endpoint => endpoint.ResponseType?.FullName));
-        Assert.Equal("{id:int}", group.Endpoints[0].Endpoint.Route);
     }
 
     [Fact]
@@ -58,15 +55,13 @@ public sealed class EndpointManifestGeneratorTests
         GeneratorRun run = GeneratorRun.Of(Groups + """
             internal abstract class OrdersEndpoint<TResponse> : IEndpoint<OrdersGroup, TResponse>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public abstract string Route { get; }
-                public abstract Delegate Handler { get; }
+                public abstract RouteHandlerBuilder Map(IEndpointRouteBuilder group);
             }
 
             internal sealed class CountOrdersEndpoint : OrdersEndpoint<int>
             {
-                public override string Route => "count";
-                public override Delegate Handler => () => Results.Ok(1);
+                public override RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("count", () => 1);
             }
             """);
 
@@ -85,8 +80,7 @@ public sealed class EndpointManifestGeneratorTests
             Groups + """
                 internal sealed partial class ListOrdersEndpoint : IEndpoint<OrdersGroup>
                 {
-                    public HttpMethod Method => HttpMethod.Get;
-                    public string Route => string.Empty;
+                    public string? Name => "ListOrders";
                 }
                 """,
             """
@@ -94,7 +88,8 @@ public sealed class EndpointManifestGeneratorTests
 
                 internal sealed partial class ListOrdersEndpoint : IEndpoint
                 {
-                    public Delegate Handler => () => Results.Ok();
+                    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                        group.MapGet("", () => Results.Ok());
                 }
                 """,
         ]);
@@ -115,9 +110,8 @@ public sealed class EndpointManifestGeneratorTests
         GeneratorRun run = GeneratorRun.Of(Groups + $$"""
             internal sealed class GetOrderEndpoint : IEndpoint<OrdersGroup, {{responseType}}>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
             """);
 
@@ -148,9 +142,8 @@ public sealed class EndpointManifestGeneratorTests
                 {
                 }
 
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
             """);
 
@@ -195,9 +188,8 @@ public sealed class EndpointManifestGeneratorTests
             [Obsolete("Use v2.")]
             internal sealed class OldOrdersEndpoint : IEndpoint<OrdersGroup>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => "old";
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("old", () => Results.Ok());
             }
             """);
 
@@ -216,9 +208,8 @@ public sealed class EndpointManifestGeneratorTests
         GeneratorRun run = GeneratorRun.Of(Groups + """
             internal sealed class DirectEndpoint : IEndpoint
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
             """);
 
@@ -244,9 +235,8 @@ public sealed class EndpointManifestGeneratorTests
             internal sealed class TwoGroupsEndpoint
                 : IEndpoint<OrdersGroup>, IEndpoint<ReportsGroup>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
             """);
 
@@ -264,9 +254,8 @@ public sealed class EndpointManifestGeneratorTests
             internal sealed class TwoResponsesEndpoint
                 : IEndpoint<OrdersGroup, OrderDto>, IEndpoint<OrdersGroup, int>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
             """);
 
@@ -282,9 +271,8 @@ public sealed class EndpointManifestGeneratorTests
             internal sealed class ListOrdersEndpoint : IEndpoint<OrdersGroup>
             {
                 {{constructor}}
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
             """);
 
@@ -308,9 +296,8 @@ public sealed class EndpointManifestGeneratorTests
 
             internal sealed class ListThingsEndpoint : IEndpoint<NeedsPrefixGroup>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
             """);
 
@@ -335,9 +322,8 @@ public sealed class EndpointManifestGeneratorTests
 
             internal sealed class ListUsersEndpoint : IEndpoint<IAdminGroup>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
             """);
 
@@ -352,9 +338,8 @@ public sealed class EndpointManifestGeneratorTests
             {
                 private sealed class HiddenEndpoint : IEndpoint<OrdersGroup>
                 {
-                    public HttpMethod Method => HttpMethod.Get;
-                    public string Route => string.Empty;
-                    public Delegate Handler => () => Results.Ok();
+                    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                        group.MapGet("", () => Results.Ok());
                 }
             }
             """);
@@ -373,9 +358,8 @@ public sealed class EndpointManifestGeneratorTests
             internal sealed class GetSecretEndpoint
                 : IEndpoint<OrdersGroup, GetSecretEndpoint.Secret>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
 
                 private sealed record Secret(string Value);
             }
@@ -390,16 +374,14 @@ public sealed class EndpointManifestGeneratorTests
         GeneratorRun run = GeneratorRun.Of(Groups + """
             internal sealed class DirectEndpoint : IEndpoint
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
 
             internal sealed class ListOrdersEndpoint : IEndpoint<OrdersGroup>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
             """);
 
@@ -413,9 +395,8 @@ public sealed class EndpointManifestGeneratorTests
         GeneratorRun run = GeneratorRun.Of(Groups + """
             internal sealed class ListOrdersEndpoint : IEndpoint<MissingGroup>
             {
-                public HttpMethod Method => HttpMethod.Get;
-                public string Route => string.Empty;
-                public Delegate Handler => () => Results.Ok();
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
             }
             """);
 

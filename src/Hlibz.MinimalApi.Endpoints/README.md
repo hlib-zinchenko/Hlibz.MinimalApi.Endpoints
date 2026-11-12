@@ -22,32 +22,31 @@ internal sealed class OrdersEndpointGroup : IEndpointGroup
 
 internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>
 {
-    public HttpMethod Method => HttpMethod.Get;
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet("{id:int}", Handle)
+            .RequireAuthorization("Member")
+            .ProducesErrors(StatusCodes.Status404NotFound);
 
-    public string Route => "{id:int}";
-
-    public IReadOnlyList<int> ProducesErrors => [StatusCodes.Status404NotFound];
-
-    public string? AuthorizationPolicy => "Member";
-
-    public Delegate Handler => (int id, IOrderService orders) => orders.Find(id) is { } order
-        ? Results.Ok(order)
-        : Results.NotFound();
+    private static Results<Ok<OrderDto>, NotFound> Handle(int id, IOrderService orders) =>
+        orders.Find(id) is { } order ? TypedResults.Ok(order) : TypedResults.NotFound();
 }
 
 app.MapEndpoints(typeof(Program).Assembly);
 ```
 
-The endpoint is mapped into its group, named `GetOrder`, and documents `200` as `OrderDto`
-plus `404`, and `401`/`403` because it ends up requiring authorization. `429` is documented
-whenever it ends up rate limited, `413` for uploads (`MaxUploadBytes`), and file downloads
-via `FileContentType`. Errors use `ProblemDetails` unless you set your own
+`Map` is a plain minimal API chain. The endpoint is mapped into its group, named `GetOrder`,
+and documents `200` as `OrderDto` (from the handler's return type) plus `404`, and
+`401`/`403` because it ends up requiring authorization. `429` is documented whenever it ends
+up rate limited, `413` for uploads (`.AcceptsUpload(maxBytes)`), and file downloads via
+`.ProducesFile(contentType)`. The endpoint class's XML `<summary>` becomes the operation
+description, read by the generator at compile time (no documentation file needed). Errors use `ProblemDetails` unless you set your own
 (`options.UseErrorResponse<TError>()`); app-wide rules go in group and endpoint conventions
 (`options.ConfigureGroups<IAdminEndpointGroup>(...)`).
 
-Endpoints are listed at compile time by a source generator that ships inside the package:
-no assembly scan at startup, and an endpoint that can't be mapped (no group, two groups, no
-parameterless constructor, ...) is a build error rather than a startup failure.
+Endpoints are listed and checked at compile time by a source generator and analyzer that ship
+inside the package: no assembly scan at startup, and an endpoint that can't be mapped (no
+group, no parameterless constructor, a `Map` that doesn't map exactly one route, a handler
+that doesn't return `TResponse`, ...) is a build error rather than a startup failure.
 
 Request validation: [Hlibz.MinimalApi.Endpoints.FluentValidation](https://www.nuget.org/packages/Hlibz.MinimalApi.Endpoints.FluentValidation).
 

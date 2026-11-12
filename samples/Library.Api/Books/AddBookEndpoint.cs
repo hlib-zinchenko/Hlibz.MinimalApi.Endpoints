@@ -19,19 +19,16 @@ internal sealed class AddBookRequestValidator : AbstractValidator<AddBookRequest
 }
 
 /// <summary>
-/// Adds a book. Members only; the request is validated before the handler runs.
+/// Adds a book to the catalog. Members only.
 /// </summary>
+/// <remarks>
+/// The request is validated before the handler runs (<c>AddFluentValidation</c>).
+/// </remarks>
 internal sealed class AddBookEndpoint : IEndpoint<BooksEndpointGroup, Book>
 {
-    public HttpMethod Method => HttpMethod.Post;
-
-    public string Route => string.Empty;
-
-    public int SuccessStatusCode => StatusCodes.Status201Created;
-
-    public string? AuthorizationPolicy => Policies.Member;
-
-    public Delegate Handler => Handle;
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapPost(string.Empty, Handle)
+            .RequireAuthorization(Policies.Member);
 
     private static Created<Book> Handle([FromBody] AddBookRequest request, BookStore store)
     {

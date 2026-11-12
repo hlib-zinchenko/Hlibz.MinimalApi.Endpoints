@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 
 namespace Hlibz.MinimalApi.Endpoints.Tests.Fixtures.DuplicateNames.Admin;
 
@@ -9,9 +11,6 @@ internal sealed class AdminBooksEndpointGroup : IEndpointGroup
 
 internal sealed class GetBookEndpoint : IEndpoint<AdminBooksEndpointGroup>
 {
-    public HttpMethod Method => HttpMethod.Get;
-
-    public string Route => "{id}";
-
-    public Delegate Handler => (string id) => Results.Ok(id);
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet("{id}", (string id) => Results.Ok(id));
 }

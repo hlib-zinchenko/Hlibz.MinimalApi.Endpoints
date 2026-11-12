@@ -10,11 +10,12 @@
 [![downloads](https://img.shields.io/nuget/dt/Hlibz.MinimalApi.Endpoints.FluentValidation?label=downloads)](https://www.nuget.org/packages/Hlibz.MinimalApi.Endpoints.FluentValidation)
 
 One class per minimal API endpoint, found and mapped for you, with its OpenAPI responses
-documented from what the endpoint *is* rather than from what you remembered to write.
+documented from what the endpoint *is* and checked by the build rather than left to what you
+remembered to write.
 
 | Package | What it gives you |
 |---|---|
-| `Hlibz.MinimalApi.Endpoints` | `IEndpoint<TGroup, TResponse>`, `IEndpointGroup`, `app.MapEndpoints(assemblies)`, per-endpoint opt-ins, group and endpoint conventions, `EndpointDiscovery`, and the source generator that lists the endpoints at compile time. No dependencies beyond ASP.NET Core. |
+| `Hlibz.MinimalApi.Endpoints` | `IEndpoint<TGroup, TResponse>`, `IEndpointGroup`, `app.MapEndpoints(assemblies)`, `ProducesErrors`/`ProducesFile`/`AcceptsUpload`, group and endpoint conventions, `EndpointDiscovery`, and the source generator and analyzer that list and check the endpoints at compile time. No dependencies beyond ASP.NET Core. |
 | `Hlibz.MinimalApi.Endpoints.FluentValidation` | `options.AddFluentValidation()`: every handler parameter with a registered `IValidator<T>` is validated before the handler runs. |
 
 Targets .NET 8, 9, 10 and 11.
@@ -25,10 +26,12 @@ Minimal APIs scale badly as one long `Program.cs`, and the usual fix, a `MapOrde
 extension per feature, still leaves the same five lines on every route: the name, the
 response type, the error codes, the 401/403 when it needs a user, the 429 when it's rate
 limited. This package keeps the REPR shape (one class per endpoint) while staying plain
-minimal APIs: the handler is the same delegate you'd pass to `MapGet`, with the same
-parameter binding, filters and `TypedResults`. No base class, no custom pipeline. A source
-generator lists the endpoints while your project compiles, but there is nothing to learn about
-it: it ships inside the package and needs no setup.
+minimal APIs: each endpoint's `Map` is the `MapGet`/`MapPost` call you'd write anyway, with
+the same parameter binding, filters, `TypedResults` and `RouteHandlerBuilder` chain. No custom
+pipeline. What stays with the package is what every route repeats: the group, the name, the
+error schema and the gate responses. A source generator lists the endpoints and an analyzer
+checks each `Map` while your project compiles, but there is nothing to learn about them: they
+ship inside the package and need no setup.
 
 ## Quick start
 
@@ -47,23 +50,18 @@ internal sealed class OrdersEndpointGroup : IEndpointGroup
 /// <summary>Gets one order.</summary>
 internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>
 {
-    public HttpMethod Method => HttpMethod.Get;
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet("{id:int}", Handle)
+            .RequireAuthorization("Member")
+            .ProducesErrors(StatusCodes.Status404NotFound);
 
-    public string Route => "{id:int}";
-
-    public IReadOnlyList<int> ProducesErrors => [StatusCodes.Status404NotFound];
-
-    public string? AuthorizationPolicy => "Member";
-
-    public Delegate Handler => Handle;
-
-    private static async Task<IResult> Handle(
+    private static async Task<Results<Ok<OrderDto>, NotFound>> Handle(
         int id,
         [FromServices] IOrderService orders,
         CancellationToken cancellationToken) =>
         await orders.FindAsync(id, cancellationToken) is { } order
-            ? Results.Ok(order)
-            : Results.NotFound();
+            ? TypedResults.Ok(order)
+            : TypedResults.NotFound();
 }
 ```
 
@@ -73,37 +71,40 @@ app.MapEndpoints(typeof(Program).Assembly);
 
 `GET api/orders/{id}` is now mapped, named `GetOrder`, tagged `Orders`, requires the
 `Member` policy, and documents `200` as `OrderDto` plus `404`, `401` and `403` as
-`ProblemDetails`.
+`ProblemDetails`. The build checks that `Map` maps one route and that the handler returns
+`OrderDto`.
 
 ## The endpoint
 
 | Member | Default | What it does |
 |---|---|---|
-| `Method` | required | `HttpMethod.Get`, `.Post`, ... |
-| `Route` | required | Relative to the group prefix; `string.Empty` for the group root. |
-| `Handler` | required | The route handler delegate, bound exactly like `MapGet`'s. |
+| `Map(group)` | required | Maps the endpoint's one route on its group: a `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` call, relative to the group prefix (`""` for the group root), plus anything else chained on the builder. Returns that builder. |
 | `Name` | `null` | The route name (and operation id); `null` uses the `EndpointName` option. |
-| `SuccessStatusCode` | `200` | The status `TResponse` and `FileContentType` are documented under (e.g. `201`). |
-| `ProducesErrors` | `[]` | Error statuses, documented with the error schema. |
-| `AuthorizationPolicy` | `null` | `RequireAuthorization(policy)`. |
-| `RateLimitPolicy` | `null` | `RequireRateLimiting(policy)`. |
-| `MaxUploadBytes` | `null` | A file upload: the request body limit, antiforgery off, `413` documented. |
-| `FileContentType` | `null` | A file download: the success response documented as that content type. |
-| `Configure(builder)` | nothing | Anything else on the `RouteHandlerBuilder`. |
 
 `IEndpoint<TGroup>` maps the endpoint into `TGroup`; `IEndpoint<TGroup, TResponse>` also
-documents the success response. The route name is the class name minus a trailing
-`Endpoint`, unless the endpoint sets `Name`. Two endpoints with the same name (say
+declares what the handler returns on success, which the build checks (`HMAE008`, `HMAE009`).
+
+Inside `Map`, chain anything a `RouteHandlerBuilder` takes (`RequireAuthorization`,
+`RequireRateLimiting`, `WithSummary`, `AddEndpointFilter`, ...) and the package's own:
+
+| Extension | What it does |
+|---|---|
+| `ProducesErrors(params int[])` | Documents error statuses with the mapping's error schema. |
+| `ProducesFile(contentType, status = 200)` | Documents the success response as a file of that content type. |
+| `AcceptsUpload(maxBytes)` | A file upload: the request body limit, antiforgery off (for token-authenticated APIs; configure it yourself when cookies authenticate the endpoint), `413` documented. |
+
+The route name is the class name minus a trailing `Endpoint`, unless the endpoint sets `Name`;
+either wins over a `WithName` inside `Map`. Two endpoints with the same name (say
 `GetBookEndpoint` in a books group and an admin group) fail `MapEndpoints`, which names both
 types; give one its own `Name`:
 
 ```csharp
 internal sealed class GetBookEndpoint : IEndpoint<AdminBooksEndpointGroup, BookDto>
 {
-    public HttpMethod Method => HttpMethod.Get;
-    public string Route => "{id}";
-    public Delegate Handler => (int id) => ...;
     public string? Name => "GetAdminBook";
+
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet("{id:int}", (int id) => TypedResults.Ok(...));
 }
 ```
 
@@ -124,18 +125,47 @@ A group is found through the endpoints that name it, so it can live in any assem
 
 ## Documented responses
 
-* `200` (or `SuccessStatusCode`) with `TResponse`, or the file content type.
-* Every `ProducesErrors` status, with the error schema.
+* The success response comes from the handler's return type, as ASP.NET Core infers it:
+  `Ok<OrderDto>` documents `200 OrderDto`, `Created<OrderDto>` `201 OrderDto`, `NoContent`
+  `204`, a plain `OrderDto` `200 OrderDto`. When a `TResponse` endpoint's handler documents
+  nothing (bare `IResult` with `HMAE009` suppressed), `200 TResponse` is documented instead.
+  `ProducesFile` documents a file download.
+* Every `ProducesErrors` status, with the error schema. It replaces a body-less response
+  ASP.NET inferred for the same status (the `NotFound` arm of `Results<Ok<T>, NotFound>`), and
+  leaves a response the handler documents with a body of its own (`Conflict<T>`).
 * `401` and `403` whenever the endpoint **ends up** requiring authorization, whatever set it:
   the endpoint, its group, a convention, or an outer `MapGroup`. `AllowAnonymous()` turns them
   off again.
 * `429` whenever the endpoint ends up with a rate limiting policy and no
   `DisableRateLimiting()`.
-* `413` on uploads.
+* `413` on `AcceptsUpload`.
 
-The gate responses are decided in a `Finally` convention, on the endpoint's final metadata, so
+The errors and gate responses are decided in a `Finally` convention, on the endpoint's final metadata, so
 they can't drift from the real behaviour. A status already documented is never added twice.
 Turn them off with `DocumentAuthorizationResponses` / `DocumentRateLimitResponses`.
+
+### Description from the XML summary
+
+An endpoint class's `<summary>` becomes its OpenAPI operation description:
+
+```csharp
+/// <summary>
+/// Gets one order by its id; a missing order is a <c>404</c>.
+/// </summary>
+/// <remarks>Notes for whoever maintains it stay here, out of the API docs.</remarks>
+internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>
+```
+
+The source generator reads the comment from the source when the endpoint compiles, so nothing
+is read at runtime and the project doesn't need `GenerateDocumentationFile`. The text is
+CommonMark: `<c>`, `<paramref>`, `<see langword>` and `<see cref>` become code spans,
+`<see href>` a link, `<para>` a paragraph, `<code>` a code block, `<list>` items a bullet list.
+`<remarks>` and the other tags are left out, and so is `<inheritdoc/>`, which has no text of its
+own. A description set anywhere else wins: `WithDescription` in `Map`, on the group or in a
+convention, or `[EndpointDescription]` on the handler. Turn it off with
+`options.DescribeEndpointsFromSummaries = false`.
+
+The summary is now read by your API's consumers, so write it for them.
 
 ## Options
 
@@ -154,12 +184,13 @@ app.MapEndpoints(assemblies, options =>
 | `EndpointName` | `EndpointMappingOptions.DefaultEndpointName` (`GetOrderEndpoint` → `GetOrder`); endpoints that set `Name` keep it. |
 | `IncludeEndpoint` | every endpoint type. |
 | `DocumentAuthorizationResponses` / `DocumentRateLimitResponses` | `true`. |
+| `DescribeEndpointsFromSummaries` | `true`: each endpoint's XML `<summary>` is its operation description. |
 | `GroupConventions` / `EndpointConventions` | none; see below. |
 
 ## Conventions: your app's own rules
 
-App-wide rules are conventions, run after each group's or endpoint's own members, in the order
-added. They can change the builder or throw to fail startup.
+App-wide rules are conventions, run after each group's own members or each endpoint's `Map`, in
+the order added. They can change the builder or throw to fail startup.
 
 ```csharp
 internal interface IAdminEndpointGroup : IEndpointGroup;
@@ -190,7 +221,9 @@ app.MapEndpoints(assemblies, options => options
 
 `EndpointContext` gives the endpoint and its type, the group, the `RouteHandlerBuilder`, the
 root services, the options, and `ProducesError(status)` to document an error with the
-configured schema. `EndpointGroupContext` gives the same for a group.
+configured schema. Call it while the convention runs; inside a `Builder.Add(...)` callback,
+which runs later, add a `ProducesErrorMetadata` to the endpoint builder's metadata instead.
+`EndpointGroupContext` gives the same for a group.
 
 ## Discovery without mapping
 
@@ -218,7 +251,8 @@ with a message saying so.
 
 ## Build errors
 
-An endpoint the generator can't list fails the build, pointing at the class:
+An endpoint the generator can't list fails the build, pointing at the class, and so does a
+`Map` the analyzer rejects, pointing at `Map` or its handler:
 
 | Id | Cause |
 |---|---|
@@ -228,6 +262,21 @@ An endpoint the generator can't list fails the build, pointing at the class:
 | `HMAE004` | The endpoint or its group has no public or internal parameterless constructor. |
 | `HMAE005` | The group is an interface or an abstract class. |
 | `HMAE006` | The endpoint, its group or its response type is private (or nested in a private type). |
+| `HMAE007` | `Map` doesn't map exactly one route: it must call `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` once on its group parameter, outside loops and lambdas, and use the parameter nowhere else (no `MapGroup`, no helper taking it). |
+| `HMAE008` | The handler of an `IEndpoint<TGroup, TResponse>` returns something that doesn't carry `TResponse`: another type, `void`, `Task`, `NoContent`, `Ok<Other>`. |
+| `HMAE009` | The handler of an `IEndpoint<TGroup, TResponse>` can't be checked: it returns `IResult`, `object` or `dynamic` (or a `Task` of one), or isn't a method group or lambda. Return a typed result such as `Ok<T>` or `Results<Ok<T>, NotFound>`, or implement `IEndpoint<TGroup>` instead. |
+
+A handler carries `TResponse` when it returns `TResponse`, a typed result of it (`Ok<T>`,
+`Created<T>`, ...), or a `Results<...>` with such an arm, optionally in a `Task<>` or
+`ValueTask<>`; nullability is ignored. A handler ending in a helper that returns `IResult`
+(such as Hlibz.Results' `result.ToHttpResult()`) fails `HMAE009`: suppress it with
+`#pragma warning disable HMAE009` around `Map`, and `200 TResponse` is still documented.
+
+What the analyzer can't see:
+
+* Any arm carrying `TResponse` satisfies it, an error arm too: `Results<NotFound<OrderDto>,
+  BadRequest>` passes.
+* A `Map` inherited from a base class in another assembly isn't analysed.
 
 ## FluentValidation
 
@@ -244,9 +293,11 @@ app.MapEndpoints(assemblies, options => options.AddFluentValidation());
 For every endpoint, every handler parameter type with an `IValidator<T>` registered gets an
 endpoint filter that validates the argument (`[FromBody]`, `[AsParameters]`, anything) before
 the handler runs, and the failure is documented. Nothing to opt into per endpoint: register a
-validator and it applies. Which types have a validator is decided once at startup, through
-`IServiceProviderIsService`; the validator itself is resolved from the request's services, so
-scoped validators (`AddValidatorsFromAssembly`'s default) work.
+validator and it applies. Which types have a validator is decided once per endpoint, through
+`IServiceProviderIsService`, when routing first builds the endpoint (the first request, or
+the first read of the OpenAPI document), not during `MapEndpoints`; the validator itself is
+resolved from the request's services, so scoped validators (`AddValidatorsFromAssembly`'s
+default) work.
 
 A failure answers with a `400` validation problem by default. Answer with your own:
 
@@ -275,17 +326,19 @@ app.MapEndpoints(assemblies, options => options
 
 ## Limitations
 
-* Discovery is trimming- and Native AOT-safe, but mapping isn't: each `Handler` is a `Delegate`
-  bound through `RequestDelegateFactory`, exactly like a `MapGet` call that ASP.NET Core's
-  Request Delegate Generator can't see. `MapEndpoints` carries `RequiresUnreferencedCode` and
-  `RequiresDynamicCode` to say so.
+* Discovery is trimming- and Native AOT-safe, but mapping isn't proven to be: each handler is
+  bound by the `MapGet`/`MapPost` call inside the endpoint's own `Map`, through
+  `RequestDelegateFactory` unless ASP.NET Core's Request Delegate Generator intercepts that
+  call. Until that is verified, `MapEndpoints` carries `RequiresUnreferencedCode` and
+  `RequiresDynamicCode`.
 * Endpoints are singletons created at startup: no constructor injection.
 
 ## Samples
 
 [`samples/Library.Api`](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/tree/main/samples/Library.Api): public and admin groups, a group
 convention, FluentValidation, authorization, rate limiting, an upload and a CSV download,
-with a `.http` file for every case and the OpenAPI document at `/openapi/v1.json`.
+with a `.http` file for every case and the OpenAPI document at `/openapi/v1.json`, rendered by
+ReDoc at `/api-docs`.
 
 ```bash
 dotnet run --project samples/Library.Api    # http://localhost:5190

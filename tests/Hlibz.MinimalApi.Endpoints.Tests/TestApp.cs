@@ -36,10 +36,16 @@ internal static class TestApp
 
     public static RouteEndpoint Endpoint(this WebApplication app, string name)
     {
+        return app.FindEndpoint(name)
+               ?? throw new InvalidOperationException($"No endpoint is named '{name}'.");
+    }
+
+    public static RouteEndpoint? FindEndpoint(this WebApplication app, string name)
+    {
         return ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(source => source.Endpoints)
             .OfType<RouteEndpoint>()
-            .Single(endpoint =>
+            .SingleOrDefault(endpoint =>
                 endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
     }
 

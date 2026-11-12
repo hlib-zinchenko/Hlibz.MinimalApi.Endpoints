@@ -1,3 +1,5 @@
+using System.Reflection;
+
 using Hlibz.MinimalApi.Endpoints.FluentValidation.Internal;
 
 using Microsoft.AspNetCore.Builder;
@@ -9,13 +11,16 @@ namespace Hlibz.MinimalApi.Endpoints.FluentValidation;
 /// </summary>
 public static class EndpointMappingOptionsExtensions
 {
+    private const string ValidationProblemContentType = "application/problem+json";
+
     /// <summary>
     /// Validates every endpoint argument whose type has an <see cref="IValidator{T}"/>
     /// registered: for each such handler parameter type the endpoint gets a filter that validates
     /// the argument before the handler runs and answers with
     /// <see cref="FluentValidationEndpointOptions.OnFailure"/> when it fails, and the failure
-    /// status is documented. Which types have a validator is decided once, at startup; the
-    /// validator itself is resolved from the request's services, so it may have any lifetime.
+    /// status is documented. Which types have a validator is decided once per endpoint, when
+    /// routing first builds it (at the first request); the validator itself is resolved from the
+    /// request's services, so it may have any lifetime.
     /// </summary>
     /// <param name="options">The mapping options.</param>
     /// <param name="configure">Configures the failure response; the defaults when omitted.</param>
@@ -34,12 +39,24 @@ public static class EndpointMappingOptionsExtensions
 
     private static void Apply(EndpointContext context, FluentValidationEndpointOptions options)
     {
+        // The handler, its inferred metadata and the app's services are on the endpoint builder,
+        // which exists only once routing builds the endpoint.
+        context.Builder.Add(endpointBuilder => Attach(endpointBuilder, options));
+    }
+
+    private static void Attach(EndpointBuilder endpoint, FluentValidationEndpointOptions options)
+    {
+        if (endpoint.Metadata.OfType<MethodInfo>().FirstOrDefault() is not { } handler)
+        {
+            return;
+        }
+
         IServiceProviderIsService isService =
-            context.Services.GetRequiredService<IServiceProviderIsService>();
+            endpoint.ApplicationServices.GetRequiredService<IServiceProviderIsService>();
 
         Type[] validatedTypes =
         [
-            .. context.Endpoint.Handler.Method
+            .. handler
                 .GetParameters()
                 .Select(parameter => parameter.ParameterType)
                 .Where(CanBeValidated)
@@ -57,7 +74,8 @@ public static class EndpointMappingOptionsExtensions
             IEndpointFilter filter = (IEndpointFilter)Activator.CreateInstance(
                 typeof(ValidationEndpointFilter<>).MakeGenericType(type),
                 options)!;
-            context.Builder.AddEndpointFilter(filter);
+            endpoint.FilterFactories.Add((_, next) =>
+                invocationContext => filter.InvokeAsync(invocationContext, next));
         }
 
         if (options.FailureStatusCode is not { } statusCode)
@@ -65,14 +83,12 @@ public static class EndpointMappingOptionsExtensions
             return;
         }
 
-        if (options.IsDefaultFailure)
-        {
-            context.Builder.ProducesValidationProblem(statusCode);
-        }
-        else
-        {
-            context.ProducesError(statusCode);
-        }
+        endpoint.Metadata.Add(options.IsDefaultFailure
+            ? new ProducesResponseTypeMetadata(
+                statusCode,
+                typeof(HttpValidationProblemDetails),
+                [ValidationProblemContentType])
+            : new ProducesErrorMetadata(statusCode));
     }
 
     /// <summary>

@@ -1,6 +1,6 @@
 using Hlibz.MinimalApi.Endpoints.Internal;
 
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.Metadata;
 
 namespace Hlibz.MinimalApi.Endpoints;
 
@@ -14,8 +14,9 @@ public static class EndpointRouteBuilderExtensions
     /// <c>MapGet</c> given a delegate that ASP.NET Core's Request Delegate Generator can't see.
     /// </summary>
     private const string HandlerBindingWarning =
-        "Each endpoint's Handler is bound through RequestDelegateFactory, like a MapMethods call "
-        + "with a Delegate: it reflects on the handler's parameters at startup.";
+        "Each endpoint's Map binds its handler through RequestDelegateFactory unless ASP.NET "
+        + "Core's Request Delegate Generator intercepted its MapGet/MapPost/... call: it reflects "
+        + "on the handler's parameters at startup.";
 
     /// <summary>
     /// Maps every endpoint in <paramref name="assembly"/> into its route group.
@@ -38,18 +39,18 @@ public static class EndpointRouteBuilderExtensions
     /// Maps every endpoint in <paramref name="assemblies"/> into its route group: each group once
     /// (<c>MapGroup</c> with its prefix, tags, authorization and rate limiting, then
     /// <see cref="IEndpointGroup.Configure"/> and the group conventions), then each endpoint
-    /// (its method, route, handler and name (<see cref="IEndpoint.Name"/>, else
-    /// <see cref="EndpointMappingOptions.EndpointName"/>), its documented responses, authorization, rate
-    /// limiting and upload limit, then <see cref="IEndpoint.Configure"/> and the endpoint
-    /// conventions).
+    /// (its own <see cref="IEndpoint.Map"/>, then its name (<see cref="IEndpoint.Name"/>, else
+    /// <see cref="EndpointMappingOptions.EndpointName"/>), then the endpoint conventions). The
+    /// documented error, authorization and rate limiting responses, and the description from the
+    /// endpoint's XML summary, are added once each endpoint's metadata is final.
     /// </summary>
     /// <param name="app">The app to map the endpoints on.</param>
     /// <param name="assemblies">The assemblies to scan.</param>
     /// <param name="configure">Configures the mapping; the defaults when omitted.</param>
     /// <returns>The same <paramref name="app"/>, for chaining.</returns>
     /// <exception cref="InvalidOperationException">
-    /// An endpoint or group can't be used, two endpoints get the same name, or a convention
-    /// rejected one.
+    /// An endpoint or group can't be used, two endpoints get the same name, an endpoint's
+    /// <see cref="IEndpoint.Map"/> returned <see langword="null"/>, or a convention rejected one.
     /// </exception>
     [RequiresUnreferencedCode(HandlerBindingWarning)]
     [RequiresDynamicCode(HandlerBindingWarning)]
@@ -112,8 +113,6 @@ public static class EndpointRouteBuilderExtensions
         return builder;
     }
 
-    [RequiresUnreferencedCode(HandlerBindingWarning)]
-    [RequiresDynamicCode(HandlerBindingWarning)]
     private static void MapEndpoint(
         IEndpointRouteBuilder app,
         RouteGroupBuilder groupBuilder,
@@ -131,58 +130,34 @@ public static class EndpointRouteBuilderExtensions
                 + $"'{name}'. Give one its own {nameof(IEndpoint)}.{nameof(IEndpoint.Name)}.");
         }
 
-        RouteHandlerBuilder builder = groupBuilder.MapMethods(
-            endpoint.Route,
-            [endpoint.Method.Method],
-            endpoint.Handler);
-
-        EndpointContext context = new(descriptor, group, builder, app.ServiceProvider, options);
+        // Null from an endpoint compiled without nullable checks, or one that suppressed them.
+        RouteHandlerBuilder builder = (RouteHandlerBuilder?)endpoint.Map(groupBuilder)
+            ?? throw new InvalidOperationException(
+                $"{descriptor.EndpointType.FullName}.{nameof(IEndpoint.Map)} returned null; "
+                + "return the builder its MapGet/MapPost/... call returned.");
 
         if (name is not null)
         {
             builder.WithName(name);
         }
 
-        if (descriptor.ResponseType is not null)
-        {
-            builder.Produces(endpoint.SuccessStatusCode, descriptor.ResponseType);
-        }
-
-        if (endpoint.FileContentType is not null)
-        {
-            builder.Produces<byte[]>(endpoint.SuccessStatusCode, endpoint.FileContentType);
-        }
-
-        if (endpoint.MaxUploadBytes is { } maxUploadBytes)
-        {
-            builder
-                .DisableAntiforgery()
-                .WithMetadata(new RequestSizeLimitAttribute(maxUploadBytes));
-            context.ProducesError(StatusCodes.Status413PayloadTooLarge);
-        }
-
-        foreach (int statusCode in endpoint.ProducesErrors.Distinct())
-        {
-            context.ProducesError(statusCode);
-        }
-
-        if (endpoint.AuthorizationPolicy is not null)
-        {
-            builder.RequireAuthorization(endpoint.AuthorizationPolicy);
-        }
-
-        if (endpoint.RateLimitPolicy is not null)
-        {
-            builder.RequireRateLimiting(endpoint.RateLimitPolicy);
-        }
-
-        endpoint.Configure(builder);
-
+        EndpointContext context = new(descriptor, group, builder, app.ServiceProvider, options);
         foreach (Action<EndpointContext> convention in options.EndpointConventions)
         {
             convention(context);
         }
 
-        ResponseDocumentation.DocumentGateResponses(builder, options);
+        if (options.DescribeEndpointsFromSummaries && descriptor.Description is { } description)
+        {
+            builder.Finally(endpointBuilder =>
+            {
+                if (!endpointBuilder.Metadata.OfType<IEndpointDescriptionMetadata>().Any())
+                {
+                    endpointBuilder.Metadata.Add(new EndpointDescriptionAttribute(description));
+                }
+            });
+        }
+
+        ResponseDocumentation.Document(builder, descriptor.ResponseType, options);
     }
 }

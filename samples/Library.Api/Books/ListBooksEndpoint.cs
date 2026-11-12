@@ -17,17 +17,14 @@ internal sealed class ListBooksQueryValidator : AbstractValidator<ListBooksQuery
 }
 
 /// <summary>
-/// Lists the catalog, optionally by one author. Rate limited; a long author is a 400.
+/// Lists the catalog, optionally only one author's books. Rate limited; an author name over
+/// 50 characters is a <c>400</c>.
 /// </summary>
 internal sealed class ListBooksEndpoint : IEndpoint<BooksEndpointGroup, Book[]>
 {
-    public HttpMethod Method => HttpMethod.Get;
-
-    public string Route => string.Empty;
-
-    public string? RateLimitPolicy => Policies.Search;
-
-    public Delegate Handler => Handle;
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet(string.Empty, Handle)
+            .RequireRateLimiting(Policies.Search);
 
     private static Ok<Book[]> Handle([AsParameters] ListBooksQuery query, BookStore store) =>
         TypedResults.Ok(store.All

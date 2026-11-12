@@ -11,13 +11,9 @@ namespace Library.Api.Books;
 /// </summary>
 internal sealed class ExportBooksEndpoint : IEndpoint<BooksEndpointGroup>
 {
-    public HttpMethod Method => HttpMethod.Get;
-
-    public string Route => "export";
-
-    public string? FileContentType => "text/csv";
-
-    public Delegate Handler => Handle;
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet("export", Handle)
+            .ProducesFile("text/csv");
 
     private static FileContentHttpResult Handle(BookStore store)
     {

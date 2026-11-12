@@ -1,23 +1,21 @@
 using Hlibz.MinimalApi.Endpoints;
 
+using Microsoft.AspNetCore.Http.HttpResults;
+
 namespace Library.Api.Books;
 
 /// <summary>
-/// Uploads a CSV of <c>title,author</c> lines, up to 64 KB. Members only.
+/// Imports books from an uploaded CSV of <c>title,author</c> lines, up to 64 KB, and answers
+/// how many were added. Members only.
 /// </summary>
 internal sealed class ImportBooksEndpoint : IEndpoint<BooksEndpointGroup, int>
 {
-    public HttpMethod Method => HttpMethod.Post;
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapPost("import", HandleAsync)
+            .AcceptsUpload(64 * 1024)
+            .RequireAuthorization(Policies.Member);
 
-    public string Route => "import";
-
-    public long? MaxUploadBytes => 64 * 1024;
-
-    public string? AuthorizationPolicy => Policies.Member;
-
-    public Delegate Handler => HandleAsync;
-
-    private static async Task<IResult> HandleAsync(
+    private static async Task<Ok<int>> HandleAsync(
         IFormFile file,
         BookStore store,
         CancellationToken cancellationToken)

@@ -62,13 +62,20 @@ public sealed class EndpointContext
 
     /// <summary>
     /// Documents an error response with the configured error schema
-    /// (<see cref="EndpointMappingOptions.ErrorResponseType"/>).
+    /// (<see cref="EndpointMappingOptions.ErrorResponseType"/>), as
+    /// <see cref="EndpointResponseExtensions.ProducesErrors"/> does inside an endpoint's
+    /// <see cref="IEndpoint.Map"/>.
     /// </summary>
+    /// <remarks>
+    /// Call it while the convention runs, during <c>MapEndpoints</c>. Inside a
+    /// <c>Builder.Add(...)</c> callback, which runs later, add a
+    /// <see cref="ProducesErrorMetadata"/> to the endpoint builder's metadata instead.
+    /// </remarks>
     /// <param name="statusCode">The error status code.</param>
     /// <returns>The context, for chaining.</returns>
     public EndpointContext ProducesError(int statusCode)
     {
-        Builder.WithMetadata(Internal.ResponseDocumentation.Error(statusCode, Options));
+        Builder.WithMetadata(new ProducesErrorMetadata(statusCode));
         return this;
     }
 }

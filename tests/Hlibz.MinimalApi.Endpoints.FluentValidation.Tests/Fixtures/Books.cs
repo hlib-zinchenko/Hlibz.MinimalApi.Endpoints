@@ -1,7 +1,9 @@
 using FluentValidation;
 
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 
 namespace Hlibz.MinimalApi.Endpoints.FluentValidation.Tests.Fixtures;
 
@@ -35,27 +37,18 @@ internal sealed class BooksEndpointGroup : IEndpointGroup
 
 internal sealed class AddBookEndpoint : IEndpoint<BooksEndpointGroup>
 {
-    public HttpMethod Method => HttpMethod.Post;
-
-    public string Route => string.Empty;
-
-    public Delegate Handler => ([FromBody] AddBookRequest request) => Results.Ok(request.Title);
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapPost(string.Empty, ([FromBody] AddBookRequest request) => Results.Ok(request.Title));
 }
 
 internal sealed class SearchBooksEndpoint : IEndpoint<BooksEndpointGroup>
 {
-    public HttpMethod Method => HttpMethod.Get;
-
-    public string Route => string.Empty;
-
-    public Delegate Handler => ([AsParameters] BookQuery query) => Results.Ok(query.Author);
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet(string.Empty, ([AsParameters] BookQuery query) => Results.Ok(query.Author));
 }
 
 internal sealed class EchoEndpoint : IEndpoint<BooksEndpointGroup>
 {
-    public HttpMethod Method => HttpMethod.Post;
-
-    public string Route => "echo";
-
-    public Delegate Handler => ([FromBody] Unvalidated body) => Results.Ok(body.Name);
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapPost("echo", ([FromBody] Unvalidated body) => Results.Ok(body.Name));
 }

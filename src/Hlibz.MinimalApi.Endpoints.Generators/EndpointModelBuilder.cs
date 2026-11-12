@@ -106,6 +106,7 @@ internal static class EndpointModelBuilder
             type.ToDisplayString(TypeOfFormat),
             group?.ToDisplayString(TypeOfFormat) ?? string.Empty,
             response?.ToDisplayString(TypeOfFormat),
+            SummaryReader.Read(type, cancellationToken),
             new EquatableArray<DiagnosticInfo>([.. diagnostics]));
     }
 

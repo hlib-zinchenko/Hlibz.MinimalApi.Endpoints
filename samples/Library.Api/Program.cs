@@ -4,6 +4,7 @@ using FluentValidation;
 
 using Hlibz.MinimalApi.Endpoints;
 using Hlibz.MinimalApi.Endpoints.FluentValidation;
+using Hlibz.Redoc.Extensions;
 
 using Library.Api;
 using Library.Api.Admin;
@@ -47,6 +48,9 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 app.MapOpenApi();
+
+// The OpenAPI document above, rendered as a ReDoc page at /api-docs.
+app.MapReDocDocuments([new ReDocDocument("v1", "Library API")]);
 
 // Two app-wide rules as group conventions: admin groups, and only admin groups, live under
 // api/admin/; and every admin group requires the admin policy and skips rate limiting. Then

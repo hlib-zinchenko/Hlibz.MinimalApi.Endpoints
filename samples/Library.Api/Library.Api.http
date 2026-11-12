@@ -3,6 +3,9 @@
 ### The OpenAPI document: every response below is documented in it.
 GET {{host}}/openapi/v1.json
 
+### The same document as a ReDoc page (open it in a browser).
+GET {{host}}/api-docs/v1/
+
 ### 200, the catalog.
 GET {{host}}/api/books
 
@@ -37,12 +40,30 @@ Content-Type: application/json
 ### 200, a CSV file.
 GET {{host}}/api/books/export
 
+### 200, the number of books imported from an uploaded CSV (members only, up to 64 KB).
+POST {{host}}/api/books/import
+X-User: alice
+X-Role: member
+Content-Type: multipart/form-data; boundary=books
+
+--books
+Content-Disposition: form-data; name="file"; filename="books.csv"
+Content-Type: text/csv
+
+Roadside Picnic,Arkady and Boris Strugatsky
+--books--
+
 ### 403: a member is not an admin.
 DELETE {{host}}/api/admin/books/1
 X-User: alice
 X-Role: member
 
 ### 204, deleted.
+DELETE {{host}}/api/admin/books/1
+X-User: bob
+X-Role: admin
+
+### 404: already deleted.
 DELETE {{host}}/api/admin/books/1
 X-User: bob
 X-Role: admin

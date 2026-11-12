@@ -1,6 +1,7 @@
 using System.Text;
 
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace Hlibz.MinimalApi.Endpoints.Generators;
 
@@ -82,6 +83,9 @@ internal static class ManifestWriter
             string response = endpoint.ResponseTypeName is null
                 ? "null"
                 : $"typeof({endpoint.ResponseTypeName})";
+            string description = endpoint.Description is null
+                ? "null"
+                : SymbolDisplay.FormatLiteral(endpoint.Description, quote: true);
             source.Append(
                 $$"""
                             new {{Registration}}(
@@ -89,7 +93,8 @@ internal static class ManifestWriter
                                 static () => new {{endpoint.TypeName}}(),
                                 typeof({{endpoint.GroupTypeName}}),
                                 static () => new {{endpoint.GroupTypeName}}(),
-                                {{response}}),
+                                {{response}},
+                                {{description}}),
 
                 """);
         }

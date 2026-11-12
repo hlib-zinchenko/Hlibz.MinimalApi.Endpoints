@@ -11,3 +11,6 @@ HMAE003 | Hlibz.MinimalApi.Endpoints | Error | Endpoint names more than one resp
 HMAE004 | Hlibz.MinimalApi.Endpoints | Error | Endpoint or group has no usable parameterless constructor
 HMAE005 | Hlibz.MinimalApi.Endpoints | Error | Endpoint group is abstract
 HMAE006 | Hlibz.MinimalApi.Endpoints | Error | Type isn't accessible to the generated code
+HMAE007 | Hlibz.MinimalApi.Endpoints | Error | Map doesn't map exactly one route
+HMAE008 | Hlibz.MinimalApi.Endpoints | Error | Handler doesn't return the endpoint's response type
+HMAE009 | Hlibz.MinimalApi.Endpoints | Error | Handler's response can't be checked against the endpoint's response type

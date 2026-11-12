@@ -17,8 +17,12 @@ internal sealed class GeneratorRun
         using System;
         using System.Collections.Generic;
         using System.Net.Http;
+        using System.Threading.Tasks;
         using Hlibz.MinimalApi.Endpoints;
+        using Microsoft.AspNetCore.Builder;
         using Microsoft.AspNetCore.Http;
+        using Microsoft.AspNetCore.Http.HttpResults;
+        using Microsoft.AspNetCore.Routing;
 
         """;
 
@@ -62,24 +66,12 @@ internal sealed class GeneratorRun
     public static GeneratorRun Of(string source, bool referenceLibrary = true) =>
         Of([source], referenceLibrary);
 
-    public static GeneratorRun Of(string[] sources, bool referenceLibrary = true)
+    public static GeneratorRun Of(
+        string[] sources,
+        bool referenceLibrary = true,
+        DocumentationMode documentationMode = DocumentationMode.Parse)
     {
-        CSharpParseOptions parseOptions = new(LanguageVersion.CSharp12);
-        MetadataReference[] references = referenceLibrary
-            ? AllReferences
-            : [.. AllReferences.Where(reference => !reference.Display!.EndsWith(
-                "Hlibz.MinimalApi.Endpoints.dll",
-                StringComparison.Ordinal))];
-        CSharpCompilation compilation = CSharpCompilation.Create(
-            "Generated.Endpoints-1",
-            sources.Select((source, index) => CSharpSyntaxTree.ParseText(
-                Usings + source,
-                parseOptions,
-                path: $"Source{index}.cs")),
-            references,
-            new CSharpCompilationOptions(
-                OutputKind.DynamicallyLinkedLibrary,
-                nullableContextOptions: NullableContextOptions.Enable));
+        CSharpCompilation compilation = Compile(sources, referenceLibrary, documentationMode);
 
         GeneratorDriver driver = CSharpGeneratorDriver
             .Create(new EndpointManifestGenerator())
@@ -92,6 +84,40 @@ internal sealed class GeneratorRun
             .Select(tree => tree.ToString())
             .SingleOrDefault();
         return new GeneratorRun(diagnostics, output, manifest);
+    }
+
+    /// <summary>
+    /// Compiles <paramref name="sources"/> in memory, each after the shared usings, against the
+    /// test runtime's assemblies.
+    /// </summary>
+    /// <param name="sources">The sources.</param>
+    /// <param name="referenceLibrary">Whether to reference Hlibz.MinimalApi.Endpoints.</param>
+    /// <param name="documentationMode">
+    /// How the compiler reads documentation comments; <see cref="DocumentationMode.None"/> is a
+    /// project without <c>GenerateDocumentationFile</c>.
+    /// </param>
+    /// <returns>The compilation, generator not run.</returns>
+    public static CSharpCompilation Compile(
+        string[] sources,
+        bool referenceLibrary = true,
+        DocumentationMode documentationMode = DocumentationMode.Parse)
+    {
+        CSharpParseOptions parseOptions = new(LanguageVersion.CSharp12, documentationMode);
+        MetadataReference[] references = referenceLibrary
+            ? AllReferences
+            : [.. AllReferences.Where(reference => !reference.Display!.EndsWith(
+                "Hlibz.MinimalApi.Endpoints.dll",
+                StringComparison.Ordinal))];
+        return CSharpCompilation.Create(
+            "Generated.Endpoints-1",
+            sources.Select((source, index) => CSharpSyntaxTree.ParseText(
+                Usings + source,
+                parseOptions,
+                path: $"Source{index}.cs")),
+            references,
+            new CSharpCompilationOptions(
+                OutputKind.DynamicallyLinkedLibrary,
+                nullableContextOptions: NullableContextOptions.Enable));
     }
 
     /// <summary>

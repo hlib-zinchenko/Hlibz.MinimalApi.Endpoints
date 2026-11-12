@@ -20,7 +20,8 @@ app.MapEndpoints(typeof(Program).Assembly, options => options.AddFluentValidatio
 
 Every handler parameter type with an `IValidator<T>` registered gets an endpoint filter that
 validates the argument before the handler runs, and the failure status is documented. Nothing
-to opt into per endpoint. Validators resolve from the request's services, so any lifetime works.
+to opt into per endpoint. Which types have a validator is decided when routing first builds
+each endpoint; validators resolve from the request's services, so any lifetime works.
 
 A failure is a `400` validation problem by default; answer with your own instead:
 

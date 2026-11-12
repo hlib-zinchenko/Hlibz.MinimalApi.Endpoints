@@ -25,6 +25,13 @@ public sealed class MapEndpointsTests
     private const string ExplicitNames =
         "Hlibz.MinimalApi.Endpoints.Tests.Fixtures.ExplicitNames";
 
+    private const string ChainNames = "Hlibz.MinimalApi.Endpoints.Tests.Fixtures.ChainNames";
+
+    private const string NullMap = "Hlibz.MinimalApi.Endpoints.Tests.Fixtures.NullMap";
+
+    private const string Descriptions =
+        "Hlibz.MinimalApi.Endpoints.Tests.Fixtures.Descriptions";
+
     [Fact]
     public async Task MapEndpoints_WithGroupPrefix_ServesEndpointUnderPrefix()
     {
@@ -109,6 +116,38 @@ public sealed class MapEndpointsTests
     }
 
     [Fact]
+    public async Task MapEndpoints_WithWithNameInMapAndNameProperty_PrefersProperty()
+    {
+        await using WebApplication app = await TestApp.StartAsync(ExplicitNames);
+
+        Assert.Equal(
+            "GetAdminBook",
+            app.Endpoint("GetAdminBook").Metadata.GetMetadata<IRouteNameMetadata>()?.RouteName);
+        Assert.Null(app.FindEndpoint("FromChain"));
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithWithNameInMap_PrefersNamingOption()
+    {
+        await using WebApplication app = await TestApp.StartAsync(ChainNames);
+
+        Assert.Equal("api/books/", app.Endpoint("ListBooks").RoutePattern.RawText);
+        Assert.Null(app.FindEndpoint("FromChain"));
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithMapReturningNull_FailsAtStartupNamingEndpoint()
+    {
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => TestApp.StartAsync(NullMap));
+
+        Assert.StartsWith(
+            typeof(Fixtures.NullMap.BrokenEndpoint).FullName + ".Map returned null",
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task MapEndpoints_WithEndpointNamePropertyAndNamingOption_PrefersProperty()
     {
         await using WebApplication app = await TestApp.StartAsync(
@@ -140,7 +179,7 @@ public sealed class MapEndpointsTests
     }
 
     [Fact]
-    public async Task MapEndpoints_WithResponseType_DocumentsSuccessResponse()
+    public async Task MapEndpoints_WithTypedHandler_DocumentsSuccessResponseOnce()
     {
         await using WebApplication app = await TestApp.StartAsync(Orders);
 
@@ -148,10 +187,23 @@ public sealed class MapEndpointsTests
             Assert.Single(app.Endpoint("GetOrder").Responses(StatusCodes.Status200OK));
 
         Assert.Equal(typeof(OrderDto), response.Type);
+        Assert.Equal(["application/json"], response.ContentTypes);
     }
 
     [Fact]
-    public async Task MapEndpoints_WithSuccessStatusCode_DocumentsResponseUnderIt()
+    public async Task MapEndpoints_WithOpaqueHandlerUnderResponseType_DocumentsResponseTypeAs200()
+    {
+        await using WebApplication app = await TestApp.StartAsync(Orders);
+
+        IProducesResponseTypeMetadata response =
+            Assert.Single(app.Endpoint("LegacyOrder").Responses(StatusCodes.Status200OK));
+
+        Assert.Equal(typeof(OrderDto), response.Type);
+        Assert.Equal(["application/json"], response.ContentTypes);
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithCreatedHandler_Documents201()
     {
         await using WebApplication app = await TestApp.StartAsync(Orders);
         RouteEndpoint endpoint = app.Endpoint("CreateOrder");
@@ -164,15 +216,28 @@ public sealed class MapEndpointsTests
     }
 
     [Fact]
-    public async Task MapEndpoints_WithProducesErrors_DocumentsThemAsProblemDetails()
+    public async Task MapEndpoints_WithProducesErrorsOverBodylessInferredStatus_ReplacesIt()
+    {
+        await using WebApplication app = await TestApp.StartAsync(Orders);
+        RouteEndpoint endpoint = app.Endpoint("GetOrder");
+
+        IProducesResponseTypeMetadata response =
+            Assert.Single(endpoint.Responses(StatusCodes.Status404NotFound));
+
+        Assert.Equal(typeof(ProblemDetails), response.Type);
+        Assert.Equal(["application/problem+json"], response.ContentTypes);
+        Assert.Empty(endpoint.Metadata.GetOrderedMetadata<ProducesErrorMetadata>());
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithProducesErrorsOverStatusWithBody_LeavesIt()
     {
         await using WebApplication app = await TestApp.StartAsync(Orders);
 
         IProducesResponseTypeMetadata response =
-            Assert.Single(app.Endpoint("GetOrder").Responses(StatusCodes.Status404NotFound));
+            Assert.Single(app.Endpoint("ReserveOrder").Responses(StatusCodes.Status409Conflict));
 
-        Assert.Equal(typeof(ProblemDetails), response.Type);
-        Assert.Equal(["application/problem+json"], response.ContentTypes);
+        Assert.Equal(typeof(OrderDto), response.Type);
     }
 
     [Fact]
@@ -203,7 +268,7 @@ public sealed class MapEndpointsTests
     }
 
     [Fact]
-    public async Task MapEndpoints_WithFileContentType_DocumentsFileResponse()
+    public async Task MapEndpoints_WithProducesFile_DocumentsFileResponse()
     {
         await using WebApplication app = await TestApp.StartAsync(Orders);
 
@@ -215,7 +280,7 @@ public sealed class MapEndpointsTests
     }
 
     [Fact]
-    public async Task MapEndpoints_WithMaxUploadBytes_LimitsBodyAndDocuments413()
+    public async Task MapEndpoints_WithAcceptsUpload_LimitsBodyAndDocuments413()
     {
         await using WebApplication app = await TestApp.StartAsync(Orders);
         RouteEndpoint endpoint = app.Endpoint("ImportOrders");
@@ -224,11 +289,13 @@ public sealed class MapEndpointsTests
             1024,
             endpoint.Metadata.GetMetadata<IRequestSizeLimitMetadata>()?.MaxRequestBodySize);
         Assert.False(endpoint.Metadata.GetMetadata<IAntiforgeryMetadata>()?.RequiresValidation);
-        Assert.Single(endpoint.Responses(StatusCodes.Status413PayloadTooLarge));
+        IProducesResponseTypeMetadata response =
+            Assert.Single(endpoint.Responses(StatusCodes.Status413PayloadTooLarge));
+        Assert.Equal(typeof(ProblemDetails), response.Type);
     }
 
     [Fact]
-    public async Task MapEndpoints_WithAuthorizationPolicy_RequiresItAndDocuments401And403()
+    public async Task MapEndpoints_WithRequireAuthorizationInMap_RequiresItAndDocuments401And403()
     {
         await using WebApplication app = await TestApp.StartAsync(Orders);
         RouteEndpoint endpoint = app.Endpoint("MyOrders");
@@ -258,7 +325,7 @@ public sealed class MapEndpointsTests
     }
 
     [Fact]
-    public async Task MapEndpoints_WithRateLimitPolicy_RequiresItAndDocuments429()
+    public async Task MapEndpoints_WithRequireRateLimitingInMap_RequiresItAndDocuments429()
     {
         await using WebApplication app = await TestApp.StartAsync(Orders);
         RouteEndpoint endpoint = app.Endpoint("SearchOrders");
@@ -280,7 +347,7 @@ public sealed class MapEndpointsTests
     }
 
     [Fact]
-    public async Task MapEndpoints_WithConfigure_AppliesEndpointsOwnSettings()
+    public async Task MapEndpoints_WithChainInMap_AppliesEndpointsOwnSettings()
     {
         await using WebApplication app = await TestApp.StartAsync(Orders);
 
@@ -288,6 +355,53 @@ public sealed class MapEndpointsTests
             app.Endpoint("CountOrders").Metadata.GetMetadata<IEndpointSummaryMetadata>();
 
         Assert.Equal("Counts the orders.", summary?.Summary);
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithSummary_DescribesOperationWithIt()
+    {
+        await using WebApplication app = await TestApp.StartAsync(Descriptions);
+
+        Assert.Equal(
+            "Lists the books, `20` per page.\n\nNewest first.",
+            Description(app.Endpoint("ListBooks")));
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithSummaryAndWithDescriptionInMap_PrefersMap()
+    {
+        await using WebApplication app = await TestApp.StartAsync(Descriptions);
+
+        Assert.Equal("From Map.", Description(app.Endpoint("CountBooks")));
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithoutSummary_LeavesOperationUndescribed()
+    {
+        await using WebApplication app = await TestApp.StartAsync(Descriptions);
+
+        Assert.Null(Description(app.Endpoint("PingBooks")));
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithDescriptionsFromSummariesOff_LeavesOperationUndescribed()
+    {
+        await using WebApplication app = await TestApp.StartAsync(
+            Descriptions,
+            options => options.DescribeEndpointsFromSummaries = false);
+
+        Assert.Null(Description(app.Endpoint("ListBooks")));
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithSummaryAndDescribingConvention_PrefersConvention()
+    {
+        await using WebApplication app = await TestApp.StartAsync(
+            Descriptions,
+            options => options.ConfigureEndpoints(
+                context => context.Builder.WithDescription("From the convention.")));
+
+        Assert.Equal("From the convention.", Description(app.Endpoint("ListBooks")));
     }
 
     [Fact]
@@ -304,7 +418,7 @@ public sealed class MapEndpointsTests
                 context.ProducesError(StatusCodes.Status409Conflict);
             }));
 
-        Assert.Equal(7, seen.Count);
+        Assert.Equal(9, seen.Count);
         RouteEndpoint endpoint = app.Endpoint("GetOrder");
         Assert.Equal(
             "api/orders",
@@ -332,6 +446,9 @@ public sealed class MapEndpointsTests
 
         Assert.Equal("GetOrder", endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName);
     }
+
+    private static string? Description(RouteEndpoint endpoint) =>
+        endpoint.Metadata.GetMetadata<IEndpointDescriptionMetadata>()?.Description;
 
     private sealed record TestError(string Message);
 }

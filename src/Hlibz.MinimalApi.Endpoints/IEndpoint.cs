@@ -6,91 +6,38 @@ namespace Hlibz.MinimalApi.Endpoints;
 /// tie the endpoint to its <see cref="IEndpointGroup"/>.
 /// The package's source generator lists every implementation when the assembly compiles, and
 /// <c>MapEndpoints</c> creates each one with its parameterless constructor (public or internal)
-/// and maps <see cref="Handler"/> into the group's route group.
+/// and calls <see cref="Map"/> with the group's route group.
 /// </summary>
 /// <remarks>
-/// Endpoints are created once, at startup, so keep them stateless: the handler's dependencies come
-/// in as its own parameters (<c>[FromServices]</c>, <c>[FromBody]</c>, <c>[AsParameters]</c>, ...)
-/// exactly as with <c>MapGet</c>/<c>MapPost</c>.
+/// <see cref="Map"/> is a plain minimal API chain: one <c>MapGet</c>/<c>MapPost</c>/... call,
+/// then anything else a <see cref="RouteHandlerBuilder"/> takes (<c>RequireAuthorization</c>,
+/// <c>RequireRateLimiting</c>, <c>WithSummary</c>, the package's own
+/// <see cref="EndpointResponseExtensions.ProducesErrors"/>, ...). Endpoints are created once, at
+/// startup, so keep them stateless: the handler's dependencies come in as its own parameters
+/// (<c>[FromServices]</c>, <c>[FromBody]</c>, <c>[AsParameters]</c>, ...).
 /// </remarks>
 public interface IEndpoint
 {
-    /// <summary>
-    /// Gets the HTTP method the endpoint answers, e.g. <see cref="HttpMethod.Get"/>.
-    /// </summary>
-    HttpMethod Method { get; }
-
-    /// <summary>
-    /// Gets the route, relative to the group's <see cref="IEndpointGroup.Prefix"/>:
-    /// <see cref="string.Empty"/> for the group root, or e.g. <c>"{id}"</c>.
-    /// </summary>
-    [StringSyntax("Route")]
-    string Route { get; }
-
-    /// <summary>
-    /// Gets the route handler: the same delegate you would pass to <c>MapGet</c>/<c>MapPost</c>.
-    /// </summary>
-    Delegate Handler { get; }
-
     /// <summary>
     /// Gets the endpoint's route name (<c>WithName</c>, which is also its OpenAPI operation id),
     /// or <see langword="null"/> to name it with <see cref="EndpointMappingOptions.EndpointName"/>
     /// (by default the class name minus a trailing <c>Endpoint</c>). Set it when two endpoint
     /// classes share a name, e.g. <c>GetBookEndpoint</c> in a books group and an admin group.
+    /// A <c>WithName</c> call inside <see cref="Map"/> is overridden by this name, or by the
+    /// naming option when this is <see langword="null"/>.
     /// </summary>
     string? Name => null;
 
     /// <summary>
-    /// Gets the status code of the success response that <see cref="IEndpoint{TGroup, TResponse}"/>
-    /// and <see cref="FileContentType"/> document. Defaults to <c>200</c>.
+    /// Maps the endpoint's route on <paramref name="group"/>: exactly one call to
+    /// <c>MapGet</c>, <c>MapPost</c>, <c>MapPut</c>, <c>MapDelete</c>, <c>MapPatch</c> or
+    /// <c>MapMethods</c>, with anything else chained on the builder it returns. The route is
+    /// relative to the group's <see cref="IEndpointGroup.Prefix"/>. One route per endpoint is
+    /// checked at build time (<c>HMAE007</c>).
     /// </summary>
-    int SuccessStatusCode => StatusCodes.Status200OK;
-
-    /// <summary>
-    /// Gets the error status codes the endpoint can answer with, each documented with the error
-    /// schema of <see cref="EndpointMappingOptions.ErrorResponseType"/>. Leave out
-    /// <c>401</c>/<c>403</c>/<c>429</c>/<c>413</c>: they are documented automatically when the
-    /// endpoint requires authorization, is rate limited or takes an upload.
-    /// </summary>
-    IReadOnlyList<int> ProducesErrors => [];
-
-    /// <summary>
-    /// Gets the authorization policy the endpoint requires, or <see langword="null"/> to leave
-    /// it to the group (or open to anonymous callers).
-    /// </summary>
-    string? AuthorizationPolicy => null;
-
-    /// <summary>
-    /// Gets the rate limiting policy the endpoint is subject to, or <see langword="null"/> for
-    /// none of its own.
-    /// </summary>
-    string? RateLimitPolicy => null;
-
-    /// <summary>
-    /// Gets the largest request body, in bytes, the endpoint accepts, or <see langword="null"/>
-    /// for an endpoint that takes no file upload. Setting it marks the endpoint as a file upload:
-    /// the limit is applied to the request, antiforgery is switched off (for token-authenticated
-    /// APIs; leave this <see langword="null"/> and configure the endpoint yourself when cookies
-    /// authenticate it), and <c>413</c> is documented.
-    /// </summary>
-    long? MaxUploadBytes => null;
-
-    /// <summary>
-    /// Gets the content type of the file the endpoint returns on success, or
-    /// <see langword="null"/> for an endpoint that returns JSON. Documents the success response as
-    /// a file of that content type rather than a JSON schema.
-    /// </summary>
-    string? FileContentType => null;
-
-    /// <summary>
-    /// Applies anything else to the endpoint's route, after everything the interface describes
-    /// and before the <see cref="EndpointMappingOptions.EndpointConventions"/>.
-    /// </summary>
-    /// <param name="builder">The endpoint's route handler builder.</param>
-    void Configure(RouteHandlerBuilder builder)
-    {
-        // Nothing beyond the interface's own members by default.
-    }
+    /// <param name="group">The route group of the endpoint's <see cref="IEndpointGroup"/>.</param>
+    /// <returns>The builder the <c>Map*</c> call returned.</returns>
+    RouteHandlerBuilder Map(IEndpointRouteBuilder group);
 }
 
 /// <summary>
@@ -107,15 +54,17 @@ public interface IEndpoint<TGroup> : IEndpoint
 }
 
 /// <summary>
-/// An endpoint mapped into the route group <typeparamref name="TGroup"/> whose success response
-/// (<see cref="IEndpoint.SuccessStatusCode"/>) is documented as <typeparamref name="TResponse"/>.
+/// An endpoint mapped into the route group <typeparamref name="TGroup"/> whose handler returns
+/// <typeparamref name="TResponse"/> on success: the plain type, or a typed result carrying it such
+/// as <c>Ok&lt;TResponse&gt;</c> or <c>Results&lt;Created&lt;TResponse&gt;, NotFound&gt;</c>.
+/// The build checks the handler against it (<c>HMAE008</c>, <c>HMAE009</c>).
 /// </summary>
 /// <typeparam name="TGroup">The group the endpoint belongs to.</typeparam>
 /// <typeparam name="TResponse">The success response body.</typeparam>
 [SuppressMessage(
     "Major Code Smell",
     "S2326:Unused type parameters should be removed",
-    Justification = "Read by the source generator to document the endpoint's success response.")]
+    Justification = "Read by the source generator and checked against the handler.")]
 public interface IEndpoint<TGroup, TResponse> : IEndpoint<TGroup>
     where TGroup : IEndpointGroup
 {
