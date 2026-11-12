@@ -63,6 +63,57 @@ public sealed class AddFluentValidationTests
     }
 
     [Fact]
+    public async Task Filter_WithInvalidBodyInsideAsParameters_AnswersValidationProblem()
+    {
+        await using WebApplication app = await TestApp.StartAsync();
+        using HttpClient client = app.GetTestClient();
+
+        using HttpResponseMessage response = await client.PostAsJsonAsync(
+            "api/books/copies?copies=2",
+            new AddBookRequest(string.Empty, 0),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Single(app.Endpoint("AddBookCopies").Responses(StatusCodes.Status400BadRequest));
+    }
+
+    [Fact]
+    public async Task Filter_WithValidBodyInsideAsParameters_RunsHandler()
+    {
+        await using WebApplication app = await TestApp.StartAsync();
+        using HttpClient client = app.GetTestClient();
+
+        using HttpResponseMessage response = await client.PostAsJsonAsync(
+            "api/books/copies?copies=2",
+            new AddBookRequest("Dune", 412),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(
+            "2",
+            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("Frank", HttpStatusCode.OK)]
+    [InlineData("Frank%20Herbert", HttpStatusCode.BadRequest)]
+    public async Task Filter_WithTwoValidatedArguments_ValidatesBoth(
+        string author,
+        HttpStatusCode expected)
+    {
+        await using WebApplication app = await TestApp.StartAsync();
+        using HttpClient client = app.GetTestClient();
+
+        using HttpResponseMessage response = await client.PostAsJsonAsync(
+            $"api/books/by-author?author={author}",
+            new AddBookRequest("Dune", 412),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(expected, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Filter_WithCustomFailure_AnswersWithIt()
     {
         await using WebApplication app = await TestApp.StartAsync(options =>

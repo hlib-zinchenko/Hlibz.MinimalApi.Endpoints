@@ -42,10 +42,13 @@ Two NuGet packages released together from one tag:
   `RequiresUnreferencedCode`/`RequiresDynamicCode` because handlers bound by the `Map*` call in
   each endpoint's `Map` may go through `RequestDelegateFactory` (not yet proven otherwise).
 - `src/Hlibz.MinimalApi.Endpoints.FluentValidation`: `options.AddFluentValidation()`, an endpoint
-  convention that, in a `Builder.Add` callback (when routing first builds the endpoint), reads
-  the handler's `MethodInfo` and attaches `ValidationEndpointFilter<T>` per parameter type with a
-  registered `IValidator<T>` (checked with `IServiceProviderIsService`, resolved from
-  `RequestServices` per request). Failure via `FluentValidationEndpointOptions.OnFailure`.
+  convention adding an `AddEndpointFilterFactory` that, when routing first builds the endpoint,
+  finds the handler's values with a registered `IValidator<T>` (`ValidationTarget.For`: each
+  parameter by position, plus the properties of `[AsParameters]` parameters; checked with
+  `IServiceProviderIsService`, resolved from `RequestServices` per request) and attaches one
+  `ValidationEndpointFilter`. A `Builder.Add` callback makes the same decision to document the
+  failure, since a filter factory can't add metadata. Failure via
+  `FluentValidationEndpointOptions.OnFailure`.
 
 Born from Lighthouse's `Common.API/Endpoints`; its admin-audience rules are conventions here
 (see the README and `samples/Library.Api/Program.cs`).

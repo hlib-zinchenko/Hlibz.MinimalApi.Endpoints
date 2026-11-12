@@ -13,6 +13,8 @@ internal sealed record BookQuery(string? Author);
 
 internal sealed record Unvalidated(string Name);
 
+internal sealed record WrappedAddBookRequest([FromBody] AddBookRequest Book, [FromQuery] int Copies);
+
 internal sealed class AddBookRequestValidator : AbstractValidator<AddBookRequest>
 {
     public AddBookRequestValidator()
@@ -51,4 +53,21 @@ internal sealed class EchoEndpoint : IEndpoint<BooksEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapPost("echo", ([FromBody] Unvalidated body) => Results.Ok(body.Name));
+}
+
+internal sealed class AddBookCopiesEndpoint : IEndpoint<BooksEndpointGroup>
+{
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapPost(
+            "copies",
+            ([AsParameters] WrappedAddBookRequest request) => Results.Ok(request.Copies));
+}
+
+internal sealed class AddBookByAuthorEndpoint : IEndpoint<BooksEndpointGroup>
+{
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapPost(
+            "by-author",
+            ([FromBody] AddBookRequest request, [AsParameters] BookQuery query) =>
+                Results.Ok(query.Author));
 }

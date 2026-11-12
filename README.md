@@ -297,12 +297,19 @@ app.MapEndpoints(assemblies, options => options.AddFluentValidation());
 
 For every endpoint, every handler parameter type with an `IValidator<T>` registered gets an
 endpoint filter that validates the argument (`[FromBody]`, `[AsParameters]`, anything) before
-the handler runs, and the failure is documented. Nothing to opt into per endpoint: register a
+the handler runs, and the failure is documented. The properties of an `[AsParameters]` type
+count too: a `[FromBody] AddOrderRequest Body` inside one is validated with
+`IValidator<AddOrderRequest>`, whether or not the wrapper has a validator of its own. Nothing to opt into per endpoint: register a
 validator and it applies. Which types have a validator is decided once per endpoint, through
 `IServiceProviderIsService`, when routing first builds the endpoint (the first request, or
 the first read of the OpenAPI document), not during `MapEndpoints`; the validator itself is
 resolved from the request's services, so scoped validators (`AddValidatorsFromAssembly`'s
 default) work.
+
+ASP.NET Core 10's own validation (`builder.Services.AddValidation()`) is a separate filter for
+DataAnnotations attributes and knows nothing of FluentValidation. Turn both on and both run on
+the same arguments, each answering a failure its own way, so validate a type with one or the
+other.
 
 A failure answers with a `400` validation problem by default. Answer with your own:
 

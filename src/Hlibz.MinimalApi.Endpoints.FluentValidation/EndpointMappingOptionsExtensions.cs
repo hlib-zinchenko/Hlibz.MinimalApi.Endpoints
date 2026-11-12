@@ -15,8 +15,9 @@ public static class EndpointMappingOptionsExtensions
 
     /// <summary>
     /// Validates every endpoint argument whose type has an <see cref="IValidator{T}"/>
-    /// registered: for each such handler parameter type the endpoint gets a filter that validates
-    /// the argument before the handler runs and answers with
+    /// registered, and every such value held by a property of an <c>[AsParameters]</c>
+    /// argument: the endpoint gets one filter that validates those values, in parameter order,
+    /// before the handler runs and answers with
     /// <see cref="FluentValidationEndpointOptions.OnFailure"/> when it fails, and the failure
     /// status is documented. Which types have a validator is decided once per endpoint, when
     /// routing first builds it (at the first request); the validator itself is resolved from the
@@ -34,51 +35,35 @@ public static class EndpointMappingOptionsExtensions
         FluentValidationEndpointOptions validationOptions = new();
         configure?.Invoke(validationOptions);
 
-        return options.ConfigureEndpoints(context => Apply(context, validationOptions));
+        return options.ConfigureEndpoints(context =>
+        {
+            // The filter: a factory, which ASP.NET Core gives the handler and the app's
+            // services when it builds the endpoint; it adds nothing when nothing is validated.
+            context.Builder.AddEndpointFilterFactory((factoryContext, next) =>
+            {
+                ValidationTarget[] targets = ValidationTarget.For(
+                    factoryContext.MethodInfo,
+                    factoryContext.ApplicationServices);
+                if (targets.Length == 0)
+                {
+                    return next;
+                }
+
+                ValidationEndpointFilter filter = new(targets, validationOptions);
+                return invocationContext => filter.InvokeAsync(invocationContext, next);
+            });
+
+            // The documented failure: metadata, which a filter factory can't add, so a
+            // convention reaches the same decision on the same handler.
+            context.Builder.Add(endpointBuilder => Document(endpointBuilder, validationOptions));
+        });
     }
 
-    private static void Apply(EndpointContext context, FluentValidationEndpointOptions options)
+    private static void Document(EndpointBuilder endpoint, FluentValidationEndpointOptions options)
     {
-        // The handler, its inferred metadata and the app's services are on the endpoint builder,
-        // which exists only once routing builds the endpoint.
-        context.Builder.Add(endpointBuilder => Attach(endpointBuilder, options));
-    }
-
-    private static void Attach(EndpointBuilder endpoint, FluentValidationEndpointOptions options)
-    {
-        if (endpoint.Metadata.OfType<MethodInfo>().FirstOrDefault() is not { } handler)
-        {
-            return;
-        }
-
-        IServiceProviderIsService isService =
-            endpoint.ApplicationServices.GetRequiredService<IServiceProviderIsService>();
-
-        Type[] validatedTypes =
-        [
-            .. handler
-                .GetParameters()
-                .Select(parameter => parameter.ParameterType)
-                .Where(CanBeValidated)
-                .Distinct()
-                .Where(type => isService.IsService(typeof(IValidator<>).MakeGenericType(type))),
-        ];
-
-        if (validatedTypes.Length == 0)
-        {
-            return;
-        }
-
-        foreach (Type type in validatedTypes)
-        {
-            IEndpointFilter filter = (IEndpointFilter)Activator.CreateInstance(
-                typeof(ValidationEndpointFilter<>).MakeGenericType(type),
-                options)!;
-            endpoint.FilterFactories.Add((_, next) =>
-                invocationContext => filter.InvokeAsync(invocationContext, next));
-        }
-
-        if (options.FailureStatusCode is not { } statusCode)
+        if (options.FailureStatusCode is not { } statusCode
+            || endpoint.Metadata.OfType<MethodInfo>().FirstOrDefault() is not { } handler
+            || ValidationTarget.For(handler, endpoint.ApplicationServices).Length == 0)
         {
             return;
         }
@@ -90,17 +75,4 @@ public static class EndpointMappingOptionsExtensions
                 [ValidationProblemContentType])
             : new ProducesErrorMetadata(statusCode));
     }
-
-    /// <summary>
-    /// Whether <paramref name="type"/> can be a generic argument at all: by-ref, pointer and
-    /// ref struct parameters (<c>ref</c>/<c>out</c>, <c>Span&lt;T&gt;</c>) can't.
-    /// </summary>
-    private static bool CanBeValidated(Type type) =>
-        type is
-        {
-            IsByRef: false,
-            IsPointer: false,
-            IsByRefLike: false,
-            ContainsGenericParameters: false,
-        };
 }

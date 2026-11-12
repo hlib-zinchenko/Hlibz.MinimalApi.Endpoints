@@ -18,10 +18,14 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 app.MapEndpoints(typeof(Program).Assembly, options => options.AddFluentValidation());
 ```
 
-Every handler parameter type with an `IValidator<T>` registered gets an endpoint filter that
-validates the argument before the handler runs, and the failure status is documented. Nothing
+Every handler parameter type with an `IValidator<T>` registered, and every such property type
+of an `[AsParameters]` parameter, gets an endpoint filter that validates the value before the
+handler runs, and the failure status is documented. Nothing
 to opt into per endpoint. Which types have a validator is decided when routing first builds
 each endpoint; validators resolve from the request's services, so any lifetime works.
+
+ASP.NET Core 10's `AddValidation()` (DataAnnotations) is a separate filter; with both on,
+both run, so validate a type with one or the other.
 
 A failure is a `400` validation problem by default; answer with your own instead:
 
