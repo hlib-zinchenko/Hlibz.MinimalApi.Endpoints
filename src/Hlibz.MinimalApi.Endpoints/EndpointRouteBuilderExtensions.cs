@@ -47,7 +47,8 @@ public static class EndpointRouteBuilderExtensions
     /// <param name="configure">Configures the mapping; the defaults when omitted.</param>
     /// <returns>The same <paramref name="app"/>, for chaining.</returns>
     /// <exception cref="InvalidOperationException">
-    /// An endpoint or group can't be used, or a convention rejected one.
+    /// An endpoint or group can't be used, two endpoints get the same name, or a convention
+    /// rejected one.
     /// </exception>
     [RequiresUnreferencedCode(HandlerBindingWarning)]
     [RequiresDynamicCode(HandlerBindingWarning)]
@@ -62,13 +63,14 @@ public static class EndpointRouteBuilderExtensions
         EndpointMappingOptions options = new();
         configure?.Invoke(options);
 
+        Dictionary<string, Type> names = new(StringComparer.Ordinal);
         foreach (EndpointGroupDescriptor group in
                  EndpointDiscovery.Discover(assemblies, options.IncludeEndpoint))
         {
             RouteGroupBuilder groupBuilder = MapGroup(app, group, options);
             foreach (EndpointDescriptor endpoint in group.Endpoints)
             {
-                MapEndpoint(app, groupBuilder, group, endpoint, options);
+                MapEndpoint(app, groupBuilder, group, endpoint, options, names);
             }
         }
 
@@ -116,8 +118,18 @@ public static class EndpointRouteBuilderExtensions
         RouteGroupBuilder groupBuilder,
         EndpointGroupDescriptor group,
         EndpointDescriptor descriptor,
-        EndpointMappingOptions options)
+        EndpointMappingOptions options,
+        Dictionary<string, Type> names)
     {
+        string? name = options.EndpointName(descriptor.EndpointType);
+        if (name is not null && !names.TryAdd(name, descriptor.EndpointType))
+        {
+            throw new InvalidOperationException(
+                $"{names[name].FullName} and {descriptor.EndpointType.FullName} are both named "
+                + $"'{name}'. Rename one, or set {nameof(EndpointMappingOptions)}."
+                + $"{nameof(EndpointMappingOptions.EndpointName)} to tell them apart.");
+        }
+
         IEndpoint endpoint = descriptor.Endpoint;
         RouteHandlerBuilder builder = groupBuilder.MapMethods(
             endpoint.Route,
@@ -126,7 +138,6 @@ public static class EndpointRouteBuilderExtensions
 
         EndpointContext context = new(descriptor, group, builder, app.ServiceProvider, options);
 
-        string? name = options.EndpointName(descriptor.EndpointType);
         if (name is not null)
         {
             builder.WithName(name);

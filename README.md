@@ -92,7 +92,8 @@ app.MapEndpoints(typeof(Program).Assembly);
 
 `IEndpoint<TGroup>` maps the endpoint into `TGroup`; `IEndpoint<TGroup, TResponse>` also
 documents the success response. The route name is the class name minus a trailing
-`Endpoint`. Endpoints and groups are created once, at startup, with their parameterless
+`Endpoint`. Two endpoints given the same name (say `GetBookEndpoint` in two namespaces) fail
+`MapEndpoints` naming both types; rename one or set `EndpointName`. Endpoints and groups are created once, at startup, with their parameterless
 constructor (public or internal), so they hold no state: dependencies come in as handler
 parameters.
 

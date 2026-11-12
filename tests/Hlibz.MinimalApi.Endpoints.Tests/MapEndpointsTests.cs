@@ -19,6 +19,9 @@ public sealed class MapEndpointsTests
 {
     private const string Orders = "Hlibz.MinimalApi.Endpoints.Tests.Fixtures.Orders";
 
+    private const string DuplicateNames =
+        "Hlibz.MinimalApi.Endpoints.Tests.Fixtures.DuplicateNames";
+
     [Fact]
     public async Task MapEndpoints_WithGroupPrefix_ServesEndpointUnderPrefix()
     {
@@ -80,6 +83,28 @@ public sealed class MapEndpointsTests
         Assert.All(
             endpoints,
             endpoint => Assert.Null(endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()));
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithTwoEndpointsGivenSameName_FailsAtStartupNamingBoth()
+    {
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => TestApp.StartAsync(DuplicateNames));
+
+        Assert.Contains(typeof(Fixtures.DuplicateNames.Books.GetBookEndpoint).FullName!, exception.Message, StringComparison.Ordinal);
+        Assert.Contains(typeof(Fixtures.DuplicateNames.Admin.GetBookEndpoint).FullName!, exception.Message, StringComparison.Ordinal);
+        Assert.Contains("'GetBook'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithEndpointNameTellingSameNamedTypesApart_MapsBoth()
+    {
+        await using WebApplication app = await TestApp.StartAsync(
+            DuplicateNames,
+            options => options.EndpointName = type => type.FullName);
+
+        Assert.NotNull(app.Endpoint(typeof(Fixtures.DuplicateNames.Books.GetBookEndpoint).FullName!));
+        Assert.NotNull(app.Endpoint(typeof(Fixtures.DuplicateNames.Admin.GetBookEndpoint).FullName!));
     }
 
     [Fact]
