@@ -37,7 +37,7 @@ public static class EndpointRouteBuilderExtensions
 
     /// <summary>
     /// Maps every endpoint in <paramref name="assemblies"/> into its route group: each group once
-    /// (<c>MapGroup</c> with its prefix, tags, authorization and rate limiting, then
+    /// (<c>MapGroup</c> with its <see cref="IEndpointGroup.Prefix"/>, then
     /// <see cref="IEndpointGroup.Configure"/> and the group conventions), then each endpoint
     /// (its own <see cref="IEndpoint.Map"/>, then its name (<see cref="IEndpoint.Name"/>, else
     /// <see cref="EndpointMappingOptions.EndpointName"/>), then the endpoint conventions). The
@@ -86,22 +86,6 @@ public static class EndpointRouteBuilderExtensions
     {
         IEndpointGroup group = descriptor.Group;
         RouteGroupBuilder builder = app.MapGroup(group.Prefix);
-
-        if (group.Tags.Count > 0)
-        {
-            builder.WithTags([.. group.Tags]);
-        }
-
-        if (group.AuthorizationPolicy is not null)
-        {
-            builder.RequireAuthorization(group.AuthorizationPolicy);
-        }
-
-        if (group.RateLimitPolicy is not null)
-        {
-            builder.RequireRateLimiting(group.RateLimitPolicy);
-        }
-
         group.Configure(builder);
 
         EndpointGroupContext context = new(descriptor, builder, app.ServiceProvider, options);

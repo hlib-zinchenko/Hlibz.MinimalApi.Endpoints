@@ -17,7 +17,7 @@ internal sealed class OrdersEndpointGroup : IEndpointGroup
 {
     public string Prefix => "api/orders";
 
-    public IReadOnlyList<string> Tags => ["Orders"];
+    public void Configure(RouteGroupBuilder group) => group.WithTags("Orders");
 }
 
 internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>

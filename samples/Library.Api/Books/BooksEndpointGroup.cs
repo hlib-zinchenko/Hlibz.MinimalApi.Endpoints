@@ -6,5 +6,5 @@ internal sealed class BooksEndpointGroup : IEndpointGroup
 {
     public string Prefix => "api/books";
 
-    public IReadOnlyList<string> Tags => ["Books"];
+    public void Configure(RouteGroupBuilder group) => group.WithTags("Books");
 }

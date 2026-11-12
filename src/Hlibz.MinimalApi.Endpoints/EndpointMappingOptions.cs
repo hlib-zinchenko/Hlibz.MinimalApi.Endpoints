@@ -65,7 +65,7 @@ public sealed class EndpointMappingOptions
 
     /// <summary>
     /// Gets the conventions applied to every route group, in order, after the group's own
-    /// members and <see cref="IEndpointGroup.Configure"/>. A convention may throw to reject a
+    /// <see cref="IEndpointGroup.Configure"/>. A convention may throw to reject a
     /// group at startup.
     /// </summary>
     public IList<Action<EndpointGroupContext>> GroupConventions { get; } =

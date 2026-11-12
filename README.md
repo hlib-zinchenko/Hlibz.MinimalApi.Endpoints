@@ -44,7 +44,7 @@ internal sealed class OrdersEndpointGroup : IEndpointGroup
 {
     public string Prefix => "api/orders";
 
-    public IReadOnlyList<string> Tags => ["Orders"];
+    public void Configure(RouteGroupBuilder group) => group.WithTags("Orders");
 }
 
 /// <summary>Gets one order.</summary>
@@ -116,10 +116,23 @@ Endpoints and groups are created once, at startup, with their parameterless cons
 | Member | Default | What it does |
 |---|---|---|
 | `Prefix` | required | `MapGroup(prefix)`. |
-| `Tags` | `[]` | `WithTags(...)` on every endpoint. |
-| `AuthorizationPolicy` | `null` | Every endpoint requires it. |
-| `RateLimitPolicy` | `null` | Every endpoint is subject to it. |
-| `Configure(builder)` | nothing | Anything else on the `RouteGroupBuilder`, e.g. `WithGroupName`. |
+| `Configure(group)` | nothing | The group's rules, chained on its `RouteGroupBuilder`: `WithTags`, `RequireAuthorization`, `RequireRateLimiting`, `WithGroupName`, ... |
+
+Only the prefix is a property, because group conventions read it (an "admin groups live under
+`api/admin/`" rule, say) before any endpoint is mapped. Everything else is the same minimal API
+chain an endpoint's `Map` uses:
+
+```csharp
+internal sealed class AdminReportsEndpointGroup : IEndpointGroup
+{
+    public string Prefix => "api/admin/reports";
+
+    public void Configure(RouteGroupBuilder group) =>
+        group.WithTags("Reports")
+            .RequireAuthorization("Admin")
+            .DisableRateLimiting();
+}
+```
 
 A group is found through the endpoints that name it, so it can live in any assembly.
 
@@ -189,7 +202,7 @@ app.MapEndpoints(assemblies, options =>
 
 ## Conventions: your app's own rules
 
-App-wide rules are conventions, run after each group's own members or each endpoint's `Map`, in
+App-wide rules are conventions, run after each group's own `Configure` or each endpoint's `Map`, in
 the order added. They can change the builder or throw to fail startup.
 
 ```csharp

@@ -18,14 +18,10 @@ internal sealed class AdminReportsEndpointGroup : IEndpointGroup
 {
     public string Prefix => "api/admin/reports";
 
-    public string? AuthorizationPolicy => "Admin";
-
-    public string? RateLimitPolicy => "Reports";
-
-    public void Configure(RouteGroupBuilder builder)
-    {
-        builder.WithGroupName("admin");
-    }
+    public void Configure(RouteGroupBuilder group) =>
+        group.RequireAuthorization("Admin")
+            .RequireRateLimiting("Reports")
+            .WithGroupName("admin");
 }
 
 internal sealed class ListUsersEndpoint : IEndpoint<AdminUsersEndpointGroup>
