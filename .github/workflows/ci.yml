@@ -22,11 +22,11 @@ jobs:
 
       - uses: actions/setup-dotnet@v5
         with:
+          # The SDK global.json pins, plus the runtimes of the older target frameworks.
+          global-json-file: global.json
           dotnet-version: |
             8.0.x
-            9.0.x
             10.0.x
-            11.0.x
 
       - name: Restore
         run: dotnet restore

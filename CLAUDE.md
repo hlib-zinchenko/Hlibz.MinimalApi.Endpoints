@@ -58,7 +58,9 @@ Born from Lighthouse's `Common.API/Endpoints`; its admin-audience rules are conv
 
 ## Requires
 
-* .NET 11 SDK, plus the .NET 8, 9 and 10 runtimes to run every test target.
+* The .NET SDK `global.json` pins (11.0.100, patches roll forward; Dependabot bumps it), plus
+  the .NET 8 and 10 runtimes to run every test target. Pinned because warnings are errors and
+  `AnalysisMode=All`: a new SDK feature band brings new analyzer rules.
 
 ## Commands
 
@@ -81,7 +83,11 @@ typed results (`Ok<T>`, `Results<...>`), and one that needs an opaque `IResult` 
 `Map` in `#pragma warning disable HMAE009`; invalid `Map` shapes are tested only as in-memory
 sources in `Generators.Tests`. Versions are central
 (`Directory.Packages.props`); the shared NuGet metadata and `Version` live in
-`Directory.Build.props`, release by pushing a `vX.Y.Z` tag.
+`Directory.Build.props`, release by pushing a `vX.Y.Z` tag (`release.yml` publishes to NuGet,
+then creates the GitHub release with generated notes, a pre-release for a suffixed version).
+Packing runs package validation (`EnablePackageValidation` in `src/Directory.Build.props`), so
+the API must match across target frameworks; add `PackageValidationBaselineVersion` once 1.0.0
+ships.
 
 Release policy: both packages always ship together under one version (lockstep).
 FluentValidation stays at the oldest version the add-on supports (11.0.0; Dependabot ignores it).

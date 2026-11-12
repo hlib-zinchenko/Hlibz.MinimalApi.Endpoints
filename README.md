@@ -18,7 +18,7 @@ remembered to write.
 | `Hlibz.MinimalApi.Endpoints` | `IEndpoint<TGroup, TResponse>`, `IEndpointGroup`, `app.MapEndpoints(assemblies)`, `ProducesErrors`/`ProducesFile`/`AcceptsUpload`, group and endpoint conventions, `EndpointDiscovery`, and the source generator and analyzer that list and check the endpoints at compile time. No dependencies beyond ASP.NET Core. |
 | `Hlibz.MinimalApi.Endpoints.FluentValidation` | `options.AddFluentValidation()`: every handler parameter with a registered `IValidator<T>` is validated before the handler runs. |
 
-Targets .NET 8, 9, 10 and 11.
+Targets .NET 8, 10 and 11 (the supported releases; a .NET 9 app gets the .NET 8 build).
 
 ## Why
 

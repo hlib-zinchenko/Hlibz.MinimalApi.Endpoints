@@ -1,4 +1,4 @@
-# Weekly, grouped: one PR for all NuGet updates, one for all GitHub Actions.
+# Weekly, grouped: one PR for all NuGet updates, one for all GitHub Actions, one for the SDK.
 # CI runs the tests on every PR, so a green check is what makes these safe to merge.
 # FluentValidation and Microsoft.CodeAnalysis.CSharp are deliberately low minimums (see
 # Directory.Packages.props), never bumped.
@@ -16,6 +16,13 @@ updates:
     groups:
       nuget:
         patterns: ["*"]
+  # The SDK pinned in global.json: one PR per new patch, which CI then builds with it.
+  - package-ecosystem: dotnet-sdk
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
   - package-ecosystem: github-actions
     directory: /
     schedule:
