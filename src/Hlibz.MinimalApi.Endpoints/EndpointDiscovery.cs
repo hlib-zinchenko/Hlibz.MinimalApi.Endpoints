@@ -38,16 +38,20 @@ public static class EndpointDiscovery
                 .Where(registration => includeEndpoint?.Invoke(registration.EndpointType) ?? true),
         ];
 
-        Dictionary<Type, IEndpointGroup> groups = [];
-        List<EndpointDescriptor> endpoints = new(registrations.Count);
+        // Groups in the order their first endpoint was found, each with its endpoints in order;
+        // the dictionary only finds a group's place.
+        List<(Type Type, IEndpointGroup Group, List<EndpointDescriptor> Endpoints)> groups = [];
+        Dictionary<Type, int> groupIndex = [];
         foreach (EndpointRegistration registration in registrations)
         {
-            if (!groups.ContainsKey(registration.GroupType))
+            if (!groupIndex.TryGetValue(registration.GroupType, out int index))
             {
-                groups[registration.GroupType] = registration.CreateGroup();
+                index = groups.Count;
+                groupIndex.Add(registration.GroupType, index);
+                groups.Add((registration.GroupType, registration.CreateGroup(), []));
             }
 
-            endpoints.Add(new EndpointDescriptor(
+            groups[index].Endpoints.Add(new EndpointDescriptor(
                 registration.EndpointType,
                 registration.CreateEndpoint(),
                 registration.GroupType,
@@ -57,10 +61,10 @@ public static class EndpointDiscovery
 
         return
         [
-            .. groups.Select(pair => new EndpointGroupDescriptor(
-                pair.Key,
-                pair.Value,
-                [.. endpoints.Where(endpoint => endpoint.GroupType == pair.Key)])),
+            .. groups.Select(group => new EndpointGroupDescriptor(
+                group.Type,
+                group.Group,
+                group.Endpoints)),
         ];
     }
 

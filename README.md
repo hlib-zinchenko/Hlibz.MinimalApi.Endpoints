@@ -91,7 +91,7 @@ Inside `Map`, chain anything a `RouteHandlerBuilder` takes (`RequireAuthorizatio
 |---|---|
 | `ProducesErrors(params int[])` | Documents error statuses with the mapping's error schema. |
 | `ProducesFile(contentType, status = 200)` | Documents the success response as a file of that content type. |
-| `AcceptsUpload(maxBytes)` | A file upload: the request body limit, antiforgery off (for token-authenticated APIs; configure it yourself when cookies authenticate the endpoint), `413` documented. |
+| `AcceptsUpload(maxBytes)` | A file upload: the request body limit, and the same multipart form limit (instead of the form's own 128 MB), antiforgery off (for token-authenticated APIs; configure it yourself when cookies authenticate the endpoint), `413` documented. |
 
 The route name is the class name minus a trailing `Endpoint`, unless the endpoint sets `Name`;
 either wins over a `WithName` inside `Map`. Two endpoints with the same name (say

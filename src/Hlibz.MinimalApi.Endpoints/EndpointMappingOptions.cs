@@ -105,6 +105,8 @@ public sealed class EndpointMappingOptions
     public EndpointMappingOptions UseErrorResponse<TError>(
         string contentType = "application/json")
     {
+        ArgumentNullException.ThrowIfNull(contentType);
+
         ErrorResponseType = typeof(TError);
         ErrorContentType = contentType;
         return this;
@@ -117,6 +119,8 @@ public sealed class EndpointMappingOptions
     /// <returns>The options, for chaining.</returns>
     public EndpointMappingOptions ConfigureGroups(Action<EndpointGroupContext> convention)
     {
+        ArgumentNullException.ThrowIfNull(convention);
+
         GroupConventions.Add(convention);
         return this;
     }
@@ -132,6 +136,8 @@ public sealed class EndpointMappingOptions
         Action<TGroup, RouteGroupBuilder> convention)
         where TGroup : class
     {
+        ArgumentNullException.ThrowIfNull(convention);
+
         GroupConventions.Add(context =>
         {
             if (context.Group is TGroup group)
@@ -149,6 +155,8 @@ public sealed class EndpointMappingOptions
     /// <returns>The options, for chaining.</returns>
     public EndpointMappingOptions ConfigureEndpoints(Action<EndpointContext> convention)
     {
+        ArgumentNullException.ThrowIfNull(convention);
+
         EndpointConventions.Add(convention);
         return this;
     }

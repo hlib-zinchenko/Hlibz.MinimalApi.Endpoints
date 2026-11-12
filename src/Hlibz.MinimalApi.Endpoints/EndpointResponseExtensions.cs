@@ -52,8 +52,9 @@ public static class EndpointResponseExtensions
     }
 
     /// <summary>
-    /// Marks the endpoint as a file upload: the request body is limited to
-    /// <paramref name="maxBytes"/>, antiforgery is switched off, and <c>413</c> is documented with
+    /// Marks the endpoint as a file upload: the request body, and a multipart form read from it,
+    /// are limited to <paramref name="maxBytes"/> (replacing the form's own 128 MB default),
+    /// antiforgery is switched off, and <c>413</c> is documented with
     /// the mapping's error schema. Switching antiforgery off suits token-authenticated APIs; when
     /// cookies authenticate the endpoint, configure it yourself instead.
     /// </summary>
@@ -65,9 +66,12 @@ public static class EndpointResponseExtensions
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentOutOfRangeException.ThrowIfNegative(maxBytes);
 
+        // Form reading has a limit of its own (128 MB by default) that would cut a larger
+        // upload short.
         return builder
             .DisableAntiforgery()
             .WithMetadata(new RequestSizeLimitAttribute(maxBytes))
+            .WithFormOptions(multipartBodyLengthLimit: maxBytes)
             .WithMetadata(new ProducesErrorMetadata(StatusCodes.Status413PayloadTooLarge));
     }
 }

@@ -288,6 +288,9 @@ public sealed class MapEndpointsTests
         Assert.Equal(
             1024,
             endpoint.Metadata.GetMetadata<IRequestSizeLimitMetadata>()?.MaxRequestBodySize);
+        Assert.Equal(
+            1024,
+            endpoint.Metadata.GetMetadata<IFormOptionsMetadata>()?.MultipartBodyLengthLimit);
         Assert.False(endpoint.Metadata.GetMetadata<IAntiforgeryMetadata>()?.RequiresValidation);
         IProducesResponseTypeMetadata response =
             Assert.Single(endpoint.Responses(StatusCodes.Status413PayloadTooLarge));
