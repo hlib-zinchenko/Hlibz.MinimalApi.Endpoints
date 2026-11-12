@@ -11,7 +11,7 @@ namespace Library.Api.Books;
 /// The <c>404</c> is documented by <c>ProducesErrors</c> because <c>ProblemHttpResult</c>
 /// documents nothing itself.
 /// </remarks>
-internal sealed class GetBookEndpoint : IEndpoint<BooksEndpointGroup, Book>
+internal sealed class GetBookEndpoint : IEndpoint<BooksEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapGet("{id:int}", Handle)

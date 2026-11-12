@@ -1,0 +1,59 @@
+@host = http://localhost:5191
+
+### The OpenAPI document: every response below is documented in it, as an envelope.
+GET {{host}}/openapi/v1.json
+
+### The same document as a ReDoc page (open it in a browser).
+GET {{host}}/api-docs/v1/
+
+### 200, the catalog in "data".
+GET {{host}}/api/books
+
+### 200, one book in "data".
+GET {{host}}/api/books/1
+
+### 404, an envelope with "isSuccess": false.
+GET {{host}}/api/books/99
+
+### 401, enveloped by the authorization middleware: members only.
+POST {{host}}/api/books
+Content-Type: application/json
+
+{ "title": "Solaris", "author": "Stanislaw Lem" }
+
+### 403, enveloped too: signed in, but not a member.
+POST {{host}}/api/books
+X-User: bob
+X-Role: guest
+Content-Type: application/json
+
+{ "title": "Solaris", "author": "Stanislaw Lem" }
+
+### 400, validation errors in "validationErrors": empty title.
+POST {{host}}/api/books
+X-User: alice
+X-Role: member
+Content-Type: application/json
+
+{ "title": "", "author": "Stanislaw Lem" }
+
+### 400, malformed JSON, enveloped by the exception handler.
+POST {{host}}/api/books
+X-User: alice
+X-Role: member
+Content-Type: application/json
+
+{ "title":
+
+### 200, the new book in "data".
+POST {{host}}/api/books
+X-User: alice
+X-Role: member
+Content-Type: application/json
+
+{ "title": "Solaris", "author": "Stanislaw Lem" }
+
+### 200, an envelope with no "data".
+DELETE {{host}}/api/books/2
+X-User: alice
+X-Role: member

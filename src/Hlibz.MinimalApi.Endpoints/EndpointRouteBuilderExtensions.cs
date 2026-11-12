@@ -142,6 +142,6 @@ public static class EndpointRouteBuilderExtensions
             });
         }
 
-        ResponseDocumentation.Document(builder, descriptor.ResponseType, options);
+        ResponseDocumentation.Document(builder, options);
     }
 }

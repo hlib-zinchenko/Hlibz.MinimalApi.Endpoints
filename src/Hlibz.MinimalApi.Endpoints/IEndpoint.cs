@@ -2,8 +2,8 @@ namespace Hlibz.MinimalApi.Endpoints;
 
 /// <summary>
 /// One minimal API endpoint, in a class of its own. Don't implement this interface directly:
-/// implement <see cref="IEndpoint{TGroup}"/> or <see cref="IEndpoint{TGroup, TResponse}"/>, which
-/// tie the endpoint to its <see cref="IEndpointGroup"/>.
+/// implement <see cref="IEndpoint{TGroup}"/>, which ties the endpoint to its
+/// <see cref="IEndpointGroup"/>.
 /// The package's source generator lists every implementation when the assembly compiles, and
 /// <c>MapEndpoints</c> creates each one with its parameterless constructor (public or internal)
 /// and calls <see cref="Map"/> with the group's route group.
@@ -49,23 +49,6 @@ public interface IEndpoint
     "S2326:Unused type parameters should be removed",
     Justification = "Read by the source generator to map the endpoint into its route group.")]
 public interface IEndpoint<TGroup> : IEndpoint
-    where TGroup : IEndpointGroup
-{
-}
-
-/// <summary>
-/// An endpoint mapped into the route group <typeparamref name="TGroup"/> whose handler returns
-/// <typeparamref name="TResponse"/> on success: the plain type, or a typed result carrying it such
-/// as <c>Ok&lt;TResponse&gt;</c> or <c>Results&lt;Created&lt;TResponse&gt;, NotFound&gt;</c>.
-/// The build checks the handler against it (<c>HMAE008</c>, <c>HMAE009</c>).
-/// </summary>
-/// <typeparam name="TGroup">The group the endpoint belongs to.</typeparam>
-/// <typeparam name="TResponse">The success response body.</typeparam>
-[SuppressMessage(
-    "Major Code Smell",
-    "S2326:Unused type parameters should be removed",
-    Justification = "Read by the source generator and checked against the handler.")]
-public interface IEndpoint<TGroup, TResponse> : IEndpoint<TGroup>
     where TGroup : IEndpointGroup
 {
 }

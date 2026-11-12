@@ -23,13 +23,12 @@ public sealed class EndpointDiscoveryTests
     }
 
     [Fact]
-    public void Discover_WithResponseType_DescribesIt()
+    public void Discover_WithEndpoint_DescribesIt()
     {
         EndpointDescriptor endpoint = Discover("Hlibz.MinimalApi.Endpoints.Tests.Fixtures.Orders")
             .SelectMany(group => group.Endpoints)
             .Single(endpoint => endpoint.EndpointType == typeof(GetOrderEndpoint));
 
-        Assert.Equal(typeof(OrderDto), endpoint.ResponseType);
         Assert.Equal(typeof(OrdersEndpointGroup), endpoint.GroupType);
         Assert.IsType<GetOrderEndpoint>(endpoint.Endpoint);
     }

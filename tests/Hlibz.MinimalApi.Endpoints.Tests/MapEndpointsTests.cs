@@ -191,18 +191,6 @@ public sealed class MapEndpointsTests
     }
 
     [Fact]
-    public async Task MapEndpoints_WithOpaqueHandlerUnderResponseType_DocumentsResponseTypeAs200()
-    {
-        await using WebApplication app = await TestApp.StartAsync(Orders);
-
-        IProducesResponseTypeMetadata response =
-            Assert.Single(app.Endpoint("LegacyOrder").Responses(StatusCodes.Status200OK));
-
-        Assert.Equal(typeof(OrderDto), response.Type);
-        Assert.Equal(["application/json"], response.ContentTypes);
-    }
-
-    [Fact]
     public async Task MapEndpoints_WithCreatedHandler_Documents201()
     {
         await using WebApplication app = await TestApp.StartAsync(Orders);
@@ -421,7 +409,7 @@ public sealed class MapEndpointsTests
                 context.ProducesError(StatusCodes.Status409Conflict);
             }));
 
-        Assert.Equal(9, seen.Count);
+        Assert.Equal(8, seen.Count);
         RouteEndpoint endpoint = app.Endpoint("GetOrder");
         Assert.Equal(
             "api/orders",

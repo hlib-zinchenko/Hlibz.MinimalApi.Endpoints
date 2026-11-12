@@ -8,7 +8,7 @@ Two NuGet packages released together from one tag:
 
 - `src/Hlibz.MinimalApi.Endpoints`: `IEndpoint` (two members: `Map(IEndpointRouteBuilder group)`
   holding the endpoint's one `MapGet`/`MapPost`/... chain, and `string? Name`) /
-  `IEndpoint<TGroup>` / `IEndpoint<TGroup, TResponse>`, `IEndpointGroup`, `EndpointDiscovery`
+  `IEndpoint<TGroup>`, `IEndpointGroup`, `EndpointDiscovery`
   (reads the generated `EndpointManifestAttribute` of each assembly →
   `EndpointGroupDescriptor`/`EndpointDescriptor`; no reflection scan), `MapEndpoints`
   (`EndpointRouteBuilderExtensions`), `EndpointResponseExtensions` (`ProducesErrors`,
@@ -16,7 +16,7 @@ Two NuGet packages released together from one tag:
   `EndpointMappingOptions` (error schema, naming, include filter, group/endpoint conventions),
   `EndpointContext`/`EndpointGroupContext`. Only the ASP.NET Core shared framework.
   The success response comes from ASP.NET's inferred metadata (the handler's return type);
-  declared errors (`ProducesErrorMetadata`), the `200 TResponse` fallback and 401/403/429 are
+  declared errors (`ProducesErrorMetadata`) and 401/403/429 are
   resolved by one `Finally` convention on the endpoint's final metadata
   (`Internal/ResponseDocumentation`), so they follow whatever set authorization or rate
   limiting; keep it that way rather than inspecting the endpoint. The operation description
@@ -30,8 +30,9 @@ Two NuGet packages released together from one tag:
   reports unusable endpoints as `HMAE001`-`HMAE006`, struct endpoints as `HMAE010` and
   generic ones (never mapped; abstract bases are skipped) as the warning `HMAE011`; the
   analyzer reads each `Map` body's
-  operation tree and reports `HMAE007` (not exactly one route), `HMAE008`/`HMAE009` (handler
-  doesn't return / can't be checked against `TResponse`). All but `HMAE011` are build errors
+  operation tree and reports `HMAE007` (not exactly one route). There is no response type to
+  check: the handler's return type is the contract, whatever result library it comes from
+  (`HMAE003`/`HMAE008`/`HMAE009` are retired, don't reuse them). All but `HMAE011` are build errors
   (`Diagnostics.cs`, `AnalyzerReleases.Unshipped.md`, the README's "Build errors").
   The library packs it under `analyzers/dotnet/cs` plus `buildTransitive/*.targets`, which adds
   it to projects that get the package indirectly (NuGet withholds analyzers there). Tests,
@@ -55,6 +56,9 @@ Born from Lighthouse's `Common.API/Endpoints`; its admin-audience rules are conv
 
 - `samples/Library.Api`: net11.0 only, never packed, references the library projects. Keep its
   `.http` file and `samples/README.md` in step with the responses.
+- `samples/Envelope.Api` (same rules, :5191): handlers return Hlibz.Results' `Result`/`Result<T>`;
+  Hlibz.Results' `WithResultEnvelopes()` (applied in `ConfigureEndpoints`) sends and documents them
+  as envelopes, `UseErrorResponse<ResultEnvelope>()` documents the errors.
 
 ## Requires
 
@@ -70,6 +74,7 @@ dotnet test
 dotnet test -f net11.0
 dotnet pack -c Release -o ./nupkg
 dotnet run --project samples/Library.Api    # :5190, try Library.Api.http
+dotnet run --project samples/Envelope.Api   # :5191, try Envelope.Api.http
 ```
 
 ## Conventions
@@ -78,9 +83,8 @@ StyleCop + Sonar + `AnalysisMode=All`, warnings as errors; every public member h
 (CS1591 on for `src`). Explicit types, no `var`. Tests: xUnit v3 on Microsoft Testing Platform,
 named `Subject_WithCondition_ExpectedOutcome`; each scenario's endpoints live in their own
 `Fixtures` namespace and tests map only that namespace (`IncludeEndpoint`), so invalid fixtures
-don't break the others. Every fixture must pass the analyzer: fixtures with `TResponse` return
-typed results (`Ok<T>`, `Results<...>`), and one that needs an opaque `IResult` handler wraps
-`Map` in `#pragma warning disable HMAE009`; invalid `Map` shapes are tested only as in-memory
+don't break the others. Every fixture must pass the analyzer; invalid `Map` shapes are tested
+only as in-memory
 sources in `Generators.Tests`. Versions are central
 (`Directory.Packages.props`); the shared NuGet metadata and `Version` live in
 `Directory.Build.props`, release by pushing a `vX.Y.Z` tag (`release.yml` publishes to NuGet,

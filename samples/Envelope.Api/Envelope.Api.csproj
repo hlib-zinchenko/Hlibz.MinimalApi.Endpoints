@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Hlibz.Redoc.AspNetCore" />
+    <PackageReference Include="Hlibz.Results.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- In your own app: PackageReference Include="Hlibz.MinimalApi.Endpoints". -->
+    <ProjectReference Include="..\..\src\Hlibz.MinimalApi.Endpoints\Hlibz.MinimalApi.Endpoints.csproj" />
+  </ItemGroup>
+
+  <!-- The source generator that lists the endpoints; in your own app the package brings it. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Hlibz.MinimalApi.Endpoints.Generators\Hlibz.MinimalApi.Endpoints.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- The same demo-only header sign-in as Library.Api. -->
+  <ItemGroup>
+    <Compile Include="..\Library.Api\HeaderAuthenticationHandler.cs" Link="HeaderAuthenticationHandler.cs" />
+  </ItemGroup>
+
+</Project>

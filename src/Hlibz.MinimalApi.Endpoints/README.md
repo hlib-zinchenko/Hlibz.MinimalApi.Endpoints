@@ -20,7 +20,7 @@ internal sealed class OrdersEndpointGroup : IEndpointGroup
     public void Configure(RouteGroupBuilder group) => group.WithTags("Orders");
 }
 
-internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>
+internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapGet("{id:int}", Handle)
@@ -45,8 +45,8 @@ description, read by the generator at compile time (no documentation file needed
 
 Endpoints are listed and checked at compile time by a source generator and analyzer that ship
 inside the package: no assembly scan at startup, and an endpoint that can't be mapped (no
-group, no parameterless constructor, a `Map` that doesn't map exactly one route, a handler
-that doesn't return `TResponse`, ...) is a build error rather than a startup failure.
+group, no parameterless constructor, a `Map` that doesn't map exactly one route, ...) is a
+build error rather than a startup failure.
 
 Request validation: [Hlibz.MinimalApi.Endpoints.FluentValidation](https://www.nuget.org/packages/Hlibz.MinimalApi.Endpoints.FluentValidation).
 

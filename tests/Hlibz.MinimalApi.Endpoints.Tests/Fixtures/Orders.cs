@@ -17,7 +17,7 @@ internal sealed class OrdersEndpointGroup : IEndpointGroup
 /// <summary>
 /// A typed union whose body-less <c>404</c> the declared error replaces.
 /// </summary>
-internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>
+internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapGet("{id:int}", Handle)
@@ -27,7 +27,7 @@ internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto
         id > 0 ? TypedResults.Ok(new OrderDto(id)) : TypedResults.NotFound();
 }
 
-internal sealed class CreateOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>
+internal sealed class CreateOrderEndpoint : IEndpoint<OrdersEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapPost(string.Empty, Handle);
@@ -39,7 +39,7 @@ internal sealed class CreateOrderEndpoint : IEndpoint<OrdersEndpointGroup, Order
 /// <summary>
 /// A <c>409</c> the handler documents with a body of its own, which the declared error leaves.
 /// </summary>
-internal sealed class ReserveOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>
+internal sealed class ReserveOrderEndpoint : IEndpoint<OrdersEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapPost("{id:int}/reserve", Handle)
@@ -47,17 +47,6 @@ internal sealed class ReserveOrderEndpoint : IEndpoint<OrdersEndpointGroup, Orde
 
     private static Results<Ok<OrderDto>, Conflict<OrderDto>> Handle(int id) =>
         id > 0 ? TypedResults.Ok(new OrderDto(id)) : TypedResults.Conflict(new OrderDto(id));
-}
-
-/// <summary>
-/// An opaque handler under <c>TResponse</c>: the success response comes from the fallback.
-/// </summary>
-internal sealed class LegacyOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>
-{
-#pragma warning disable HMAE009 // Opaque on purpose: the fallback documents 200 OrderDto.
-    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
-        group.MapGet("legacy", () => Results.Ok(new OrderDto(1)));
-#pragma warning restore HMAE009
 }
 
 internal sealed class ExportOrdersEndpoint : IEndpoint<OrdersEndpointGroup>
@@ -89,7 +78,7 @@ internal sealed class SearchOrdersEndpoint : IEndpoint<OrdersEndpointGroup>
             .RequireRateLimiting("Search");
 }
 
-internal sealed class CountOrdersEndpoint : IEndpoint<OrdersEndpointGroup, int>
+internal sealed class CountOrdersEndpoint : IEndpoint<OrdersEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapGet("count", () => TypedResults.Ok(1))

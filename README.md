@@ -15,7 +15,7 @@ remembered to write.
 
 | Package | What it gives you |
 |---|---|
-| `Hlibz.MinimalApi.Endpoints` | `IEndpoint<TGroup, TResponse>`, `IEndpointGroup`, `app.MapEndpoints(assemblies)`, `ProducesErrors`/`ProducesFile`/`AcceptsUpload`, group and endpoint conventions, `EndpointDiscovery`, and the source generator and analyzer that list and check the endpoints at compile time. No dependencies beyond ASP.NET Core. |
+| `Hlibz.MinimalApi.Endpoints` | `IEndpoint<TGroup>`, `IEndpointGroup`, `app.MapEndpoints(assemblies)`, `ProducesErrors`/`ProducesFile`/`AcceptsUpload`, group and endpoint conventions, `EndpointDiscovery`, and the source generator and analyzer that list and check the endpoints at compile time. No dependencies beyond ASP.NET Core. |
 | `Hlibz.MinimalApi.Endpoints.FluentValidation` | `options.AddFluentValidation()`: every handler parameter with a registered `IValidator<T>` is validated before the handler runs. |
 
 Targets .NET 8, 10 and 11 (the supported releases; a .NET 9 app gets the .NET 8 build).
@@ -48,7 +48,7 @@ internal sealed class OrdersEndpointGroup : IEndpointGroup
 }
 
 /// <summary>Gets one order.</summary>
-internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>
+internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapGet("{id:int}", Handle)
@@ -81,8 +81,10 @@ app.MapEndpoints(typeof(Program).Assembly);
 | `Map(group)` | required | Maps the endpoint's one route on its group: a `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` call, relative to the group prefix (`""` for the group root), plus anything else chained on the builder. Returns that builder. |
 | `Name` | `null` | The route name (and operation id); `null` uses the `EndpointName` option. |
 
-`IEndpoint<TGroup>` maps the endpoint into `TGroup`; `IEndpoint<TGroup, TResponse>` also
-declares what the handler returns on success, which the build checks (`HMAE008`, `HMAE009`).
+`IEndpoint<TGroup>` maps the endpoint into `TGroup`. What the handler returns on success is
+its return type's business: a typed result (`Ok<T>`, `Results<Ok<T>, NotFound>`), your result
+library's type, or your own envelope. The compiler checks it, and ASP.NET Core (or the
+library's own integration) documents it.
 
 Inside `Map`, chain anything a `RouteHandlerBuilder` takes (`RequireAuthorization`,
 `RequireRateLimiting`, `WithSummary`, `AddEndpointFilter`, ...) and the package's own:
@@ -99,7 +101,7 @@ either wins over a `WithName` inside `Map`. Two endpoints with the same name (sa
 types; give one its own `Name`:
 
 ```csharp
-internal sealed class GetBookEndpoint : IEndpoint<AdminBooksEndpointGroup, BookDto>
+internal sealed class GetBookEndpoint : IEndpoint<AdminBooksEndpointGroup>
 {
     public string? Name => "GetAdminBook";
 
@@ -140,8 +142,8 @@ A group is found through the endpoints that name it, so it can live in any assem
 
 * The success response comes from the handler's return type, as ASP.NET Core infers it:
   `Ok<OrderDto>` documents `200 OrderDto`, `Created<OrderDto>` `201 OrderDto`, `NoContent`
-  `204`, a plain `OrderDto` `200 OrderDto`. When a `TResponse` endpoint's handler documents
-  nothing (bare `IResult` with `HMAE009` suppressed), `200 TResponse` is documented instead.
+  `204`, a plain `OrderDto` `200 OrderDto`. A handler returning a bare `IResult` documents
+  nothing: add `.Produces<OrderDto>()` in `Map`.
   `ProducesFile` documents a file download.
 * Every `ProducesErrors` status, with the error schema. It replaces a body-less response
   ASP.NET inferred for the same status (the `NotFound` arm of `Results<Ok<T>, NotFound>`), and
@@ -166,7 +168,7 @@ An endpoint class's `<summary>` becomes its OpenAPI operation description:
 /// Gets one order by its id; a missing order is a <c>404</c>.
 /// </summary>
 /// <remarks>Notes for whoever maintains it stay here, out of the API docs.</remarks>
-internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup, OrderDto>
+internal sealed class GetOrderEndpoint : IEndpoint<OrdersEndpointGroup>
 ```
 
 The source generator reads the comment from the source when the endpoint compiles, so nothing
@@ -267,34 +269,24 @@ with a message saying so.
 ## Build errors
 
 An endpoint the generator can't list fails the build, pointing at the class, and so does a
-`Map` the analyzer rejects, pointing at `Map` or its handler. Only `HMAE011` is a warning (an
+`Map` the analyzer rejects, pointing at `Map`. Only `HMAE011` is a warning (an
 error too when your project treats warnings as errors):
 
 | Id | Cause |
 |---|---|
 | `HMAE001` | Implements `IEndpoint` directly, without `IEndpoint<TGroup>`. |
 | `HMAE002` | Names more than one group. |
-| `HMAE003` | Names more than one response type. |
 | `HMAE004` | The endpoint or its group has no public or internal parameterless constructor. |
 | `HMAE005` | The group is an interface or an abstract class. |
-| `HMAE006` | The endpoint, its group or its response type is private (or nested in a private type). |
+| `HMAE006` | The endpoint or its group is private (or nested in a private type). |
 | `HMAE007` | `Map` doesn't map exactly one route: it must call `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` once on its group parameter, outside loops and lambdas, and use the parameter nowhere else (no `MapGroup`, no helper taking it). |
-| `HMAE008` | The handler of an `IEndpoint<TGroup, TResponse>` returns something that doesn't carry `TResponse`: another type, `void`, `Task`, `NoContent`, `Ok<Other>`. |
-| `HMAE009` | The handler of an `IEndpoint<TGroup, TResponse>` can't be checked: it returns `IResult`, `object` or `dynamic` (or a `Task` of one), or isn't a method group or lambda. Return a typed result such as `Ok<T>` or `Results<Ok<T>, NotFound>`, or implement `IEndpoint<TGroup>` instead. |
 | `HMAE010` | The endpoint is a struct (a `record struct` too); endpoints are classes. |
 | `HMAE011` | **Warning.** The endpoint is generic, or nested in a generic type, so it is never mapped. Make it `abstract` if it is a base for endpoints, and derive non-generic endpoints from it. |
 
-A handler carries `TResponse` when it returns `TResponse`, a typed result of it (`Ok<T>`,
-`Created<T>`, ...), or a `Results<...>` with such an arm, optionally in a `Task<>` or
-`ValueTask<>`; nullability is ignored. A handler ending in a helper that returns `IResult`
-(such as Hlibz.Results' `result.ToHttpResult()`) fails `HMAE009`: suppress it with
-`#pragma warning disable HMAE009` around `Map`, and `200 TResponse` is still documented.
+`HMAE003`, `HMAE008` and `HMAE009` are retired: they checked `IEndpoint<TGroup, TResponse>`,
+which is gone. Delete any `#pragma warning disable HMAE009` left from an earlier preview.
 
-What the analyzer can't see:
-
-* Any arm carrying `TResponse` satisfies it, an error arm too: `Results<NotFound<OrderDto>,
-  BadRequest>` passes.
-* A `Map` inherited from a base class in another assembly isn't analysed.
+A `Map` inherited from a base class in another assembly isn't analysed.
 
 ## FluentValidation
 
@@ -340,14 +332,28 @@ when it isn't `400` (e.g. `422`), or `null` to document nothing. Works with Flue
 
 [Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore) writes one
 `ErrorResponse` body for every failure, the auth gate's included. Document it as the error
-schema and every documented error matches what the API sends:
+schema and every documented error matches what the API sends. With `WithResultResponses()` on
+every endpoint, handlers return their `Result` or `Result<T>` as is: each is sent as
+`ToHttpResult()` would send it, and documented as `200` with the value:
 
 ```csharp
 app.MapEndpoints(assemblies, options => options
     .UseErrorResponse<ErrorResponse>()
+    .ConfigureEndpoints(endpoint => endpoint.Builder.WithResultResponses())
     .AddFluentValidation(validation =>
         validation.OnFailure = (result, _) => result.ToErrorResult().ToHttpResult()));
+
+internal sealed class GetBookEndpoint : IEndpoint<BooksEndpointGroup>
+{
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+        group.MapGet("{id:int}", Handle).ProducesErrors(StatusCodes.Status404NotFound);
+
+    private static Result<Book> Handle(int id, BookStore store) => store.Find(id);
+}
 ```
+
+`WithResultEnvelopes()` does the same for an API whose every response is an envelope (see
+`samples/Envelope.Api`).
 
 ## Limitations
 
@@ -365,8 +371,13 @@ convention, FluentValidation, authorization, rate limiting, an upload and a CSV 
 with a `.http` file for every case and the OpenAPI document at `/openapi/v1.json`, rendered by
 ReDoc at `/api-docs`.
 
+[`samples/Envelope.Api`](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/tree/main/samples/Envelope.Api): an API whose every response is an envelope
+([Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore)), with the
+envelope documented as the success and error schema.
+
 ```bash
 dotnet run --project samples/Library.Api    # http://localhost:5190
+dotnet run --project samples/Envelope.Api   # http://localhost:5191
 ```
 
 ## License

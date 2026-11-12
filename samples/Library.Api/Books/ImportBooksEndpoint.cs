@@ -8,7 +8,7 @@ namespace Library.Api.Books;
 /// Imports books from an uploaded CSV of <c>title,author</c> lines, up to 64 KB, and answers
 /// how many were added. Members only.
 /// </summary>
-internal sealed class ImportBooksEndpoint : IEndpoint<BooksEndpointGroup, int>
+internal sealed class ImportBooksEndpoint : IEndpoint<BooksEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapPost("import", HandleAsync)

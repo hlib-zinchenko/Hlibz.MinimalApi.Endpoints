@@ -6,29 +6,19 @@ namespace Hlibz.MinimalApi.Endpoints.Internal;
 
 /// <summary>
 /// Builds the documented responses once the endpoint's metadata is final: the declared errors
-/// with the configured schema, the success fallback for <c>TResponse</c>, and the authorization
-/// and rate limiting gates' responses.
+/// with the configured schema, and the authorization and rate limiting gates' responses.
 /// </summary>
 internal static class ResponseDocumentation
 {
-    private const string JsonContentType = "application/json";
-
     /// <summary>
     /// Adds a <c>Finally</c> convention that, once the endpoint's metadata is final (whatever the
     /// endpoint, its group, a convention or an outer route group added), documents in order:
-    /// the declared errors (<see cref="ProducesErrorMetadata"/>), the
-    /// <paramref name="responseType"/> fallback when nothing documented it, and
+    /// the declared errors (<see cref="ProducesErrorMetadata"/>), then
     /// <c>401</c>/<c>403</c>/<c>429</c>.
     /// </summary>
     /// <param name="builder">The endpoint's route handler builder.</param>
-    /// <param name="responseType">
-    /// The endpoint's <c>TResponse</c>, or <see langword="null"/>.
-    /// </param>
     /// <param name="options">The mapping options.</param>
-    public static void Document(
-        RouteHandlerBuilder builder,
-        Type? responseType,
-        EndpointMappingOptions options)
+    public static void Document(RouteHandlerBuilder builder, EndpointMappingOptions options)
     {
         // Captured now: the options aren't read again once mapping is over.
         Type? errorType = options.ErrorResponseType;
@@ -41,11 +31,6 @@ internal static class ResponseDocumentation
             IList<object> metadata = endpoint.Metadata;
 
             DocumentErrors(metadata, errorType, errorContentType);
-
-            if (responseType is not null)
-            {
-                DocumentSuccessFallback(metadata, responseType);
-            }
 
             if (documentAuthorization && RequiresAuthorization(metadata))
             {
@@ -111,26 +96,6 @@ internal static class ResponseDocumentation
         }
 
         RemoveAll(metadata, item => item is ProducesErrorMetadata);
-    }
-
-    /// <summary>
-    /// Documents <c>200 TResponse</c> when no success response already carries it: the handler's
-    /// return type documented nothing (a suppressed <c>HMAE009</c>, or a <c>Map</c> the build
-    /// didn't check).
-    /// </summary>
-    private static void DocumentSuccessFallback(IList<object> metadata, Type responseType)
-    {
-        bool documented = metadata
-            .OfType<IProducesResponseTypeMetadata>()
-            .Any(item => item.Type == responseType
-                         && item.StatusCode is >= StatusCodes.Status200OK and < 300);
-        if (!documented)
-        {
-            metadata.Add(new ProducesResponseTypeMetadata(
-                StatusCodes.Status200OK,
-                responseType,
-                [JsonContentType]));
-        }
     }
 
     private static void AddIfMissing(IList<object> metadata, ProducesResponseTypeMetadata response)

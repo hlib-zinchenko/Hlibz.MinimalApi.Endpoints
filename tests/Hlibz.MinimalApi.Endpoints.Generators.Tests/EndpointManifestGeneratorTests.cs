@@ -23,7 +23,7 @@ public sealed class EndpointManifestGeneratorTests
     public void Generate_WithEndpoints_ListsThemForDiscovery()
     {
         GeneratorRun run = GeneratorRun.Of(Groups + """
-            internal sealed class GetOrderEndpoint : IEndpoint<OrdersGroup, OrderDto>
+            internal sealed class GetOrderEndpoint : IEndpoint<OrdersGroup>
             {
                 public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
                     group.MapGet("{id:int}", (int id) => Results.Ok(new OrderDto(id)));
@@ -44,9 +44,6 @@ public sealed class EndpointManifestGeneratorTests
         Assert.Equal(
             ["App.GetOrderEndpoint", "App.PingOrdersEndpoint"],
             group.Endpoints.Select(endpoint => endpoint.EndpointType.FullName));
-        Assert.Equal(
-            ["App.OrderDto", null],
-            group.Endpoints.Select(endpoint => endpoint.ResponseType?.FullName));
     }
 
     [Fact]
@@ -94,7 +91,7 @@ public sealed class EndpointManifestGeneratorTests
     public void Generate_WithEndpointThroughBaseClass_ListsOnlyTheConcreteEndpoint()
     {
         GeneratorRun run = GeneratorRun.Of(Groups + """
-            internal abstract class OrdersEndpoint<TResponse> : IEndpoint<OrdersGroup, TResponse>
+            internal abstract class OrdersEndpoint<TResponse> : IEndpoint<OrdersGroup>
             {
                 public abstract RouteHandlerBuilder Map(IEndpointRouteBuilder group);
             }
@@ -110,7 +107,6 @@ public sealed class EndpointManifestGeneratorTests
         EndpointDescriptor endpoint = Assert.Single(
             Assert.Single(EndpointDiscovery.Discover([run.Load()])).Endpoints);
         Assert.Equal("App.CountOrdersEndpoint", endpoint.EndpointType.FullName);
-        Assert.Equal(typeof(int), endpoint.ResponseType);
     }
 
     [Fact]
@@ -137,29 +133,6 @@ public sealed class EndpointManifestGeneratorTests
 
         Assert.Empty(run.GeneratorDiagnostics);
         Assert.Single(Assert.Single(EndpointDiscovery.Discover([run.Load()])).Endpoints);
-    }
-
-    [Theory]
-    [InlineData("OrderDto?", "App.OrderDto")]
-    [InlineData("(int Id, string Name)", "System.ValueTuple`2[System.Int32,System.String]")]
-    [InlineData("List<OrderDto?>[]", "System.Collections.Generic.List`1[App.OrderDto][]")]
-    [InlineData("int?", "System.Nullable`1[System.Int32]")]
-    public void Generate_WithResponseTypeSpelledDifferently_ListsTheRuntimeType(
-        string responseType,
-        string expected)
-    {
-        GeneratorRun run = GeneratorRun.Of(Groups + $$"""
-            internal sealed class GetOrderEndpoint : IEndpoint<OrdersGroup, {{responseType}}>
-            {
-                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
-                    group.MapGet("", () => Results.Ok());
-            }
-            """);
-
-        Assert.Empty(run.GeneratorDiagnostics);
-        Type? response = Assert.Single(
-            Assert.Single(EndpointDiscovery.Discover([run.Load()])).Endpoints).ResponseType;
-        Assert.Equal(expected, response?.ToString());
     }
 
     [Fact]
@@ -288,21 +261,6 @@ public sealed class EndpointManifestGeneratorTests
             StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void Generate_WithEndpointNamingTwoResponseTypes_ReportsHmae003()
-    {
-        GeneratorRun run = GeneratorRun.Of(Groups + """
-            internal sealed class TwoResponsesEndpoint
-                : IEndpoint<OrdersGroup, OrderDto>, IEndpoint<OrdersGroup, int>
-            {
-                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
-                    group.MapGet("", () => Results.Ok());
-            }
-            """);
-
-        Assert.Equal(["HMAE003"], run.DiagnosticIds);
-    }
-
     [Theory]
     [InlineData("private ListOrdersEndpoint() { }")]
     [InlineData("public ListOrdersEndpoint(string route) { }")]
@@ -392,23 +350,6 @@ public sealed class EndpointManifestGeneratorTests
             StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void Generate_WithPrivateNestedResponseType_ReportsHmae006()
-    {
-        GeneratorRun run = GeneratorRun.Of(Groups + """
-            internal sealed class GetSecretEndpoint
-                : IEndpoint<OrdersGroup, GetSecretEndpoint.Secret>
-            {
-                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
-                    group.MapGet("", () => Results.Ok());
-
-                private sealed record Secret(string Value);
-            }
-            """);
-
-        Assert.Contains("HMAE006", run.DiagnosticIds);
-    }
-
     [Theory]
     [InlineData("internal struct ListOrdersEndpoint : IEndpoint<OrdersGroup>")]
     [InlineData("internal readonly record struct ListOrdersEndpoint : IEndpoint<OrdersGroup>")]
@@ -437,7 +378,7 @@ public sealed class EndpointManifestGeneratorTests
         "internal sealed class ListEndpoint<T> : IEndpoint<OrdersGroup>",
         "App.ListEndpoint<T>")]
     [InlineData(
-        "internal class ListEndpoint<T> : IEndpoint<OrdersGroup, T>",
+        "internal class ListEndpoint<T> : IEndpoint<OrdersGroup>",
         "App.ListEndpoint<T>")]
     public void Generate_WithGenericEndpoint_WarnsHmae011(string declaration, string name)
     {

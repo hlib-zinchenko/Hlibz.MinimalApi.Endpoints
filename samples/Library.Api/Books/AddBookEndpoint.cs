@@ -24,7 +24,7 @@ internal sealed class AddBookRequestValidator : AbstractValidator<AddBookRequest
 /// <remarks>
 /// The request is validated before the handler runs (<c>AddFluentValidation</c>).
 /// </remarks>
-internal sealed class AddBookEndpoint : IEndpoint<BooksEndpointGroup, Book>
+internal sealed class AddBookEndpoint : IEndpoint<BooksEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapPost(string.Empty, Handle)

@@ -11,7 +11,6 @@ internal static class EndpointModelBuilder
 {
     private const string EndpointName = "Hlibz.MinimalApi.Endpoints.IEndpoint";
     private const string GroupEndpointName = "Hlibz.MinimalApi.Endpoints.IEndpoint`1";
-    private const string ResponseEndpointName = "Hlibz.MinimalApi.Endpoints.IEndpoint`2";
 
     /// <summary>
     /// Fully qualified names that <c>typeof</c> accepts: <c>global::</c>, keywords for special
@@ -56,9 +55,8 @@ internal static class EndpointModelBuilder
             return Unlisted(type, declaration, Diagnostics.GenericEndpoint);
         }
 
-        ITypeSymbol[] groups = TypeArguments(type, compilation, GroupEndpointName, 0);
-        ITypeSymbol[] responses = TypeArguments(type, compilation, ResponseEndpointName, 1);
-        if (groups.Concat(responses).Any(argument => argument.TypeKind == TypeKind.Error))
+        ITypeSymbol[] groups = GroupsOf(type, compilation);
+        if (groups.Any(argument => argument.TypeKind == TypeKind.Error))
         {
             // The compiler reports that one; a second error for it would only be noise.
             return null;
@@ -96,27 +94,9 @@ internal static class EndpointModelBuilder
                 groups[0].ToDisplayString()));
         }
 
-        ITypeSymbol? response = responses.Length == 1 ? responses[0] : null;
-        if (responses.Length > 1)
-        {
-            diagnostics.Add(DiagnosticInfo.Create(
-                Diagnostics.ManyResponseTypes,
-                location,
-                name,
-                string.Join(", ", responses.Select(item => item.ToDisplayString()))));
-        }
-        else if (response is not null && !IsAccessible(response, compilation))
-        {
-            diagnostics.Add(DiagnosticInfo.Create(
-                Diagnostics.Inaccessible,
-                location,
-                response.ToDisplayString()));
-        }
-
         return new EndpointModel(
             type.ToDisplayString(TypeOfFormat),
             group?.ToDisplayString(TypeOfFormat) ?? string.Empty,
-            response?.ToDisplayString(TypeOfFormat),
             SummaryReader.Read(type, cancellationToken),
             new EquatableArray<DiagnosticInfo>([.. diagnostics]));
     }
@@ -133,7 +113,6 @@ internal static class EndpointModelBuilder
         return new EndpointModel(
             type.ToDisplayString(TypeOfFormat),
             string.Empty,
-            ResponseTypeName: null,
             Description: null,
             new EquatableArray<DiagnosticInfo>(
             [
@@ -164,16 +143,12 @@ internal static class EndpointModelBuilder
     }
 
     /// <summary>
-    /// The distinct type arguments at <paramref name="position"/> of every
-    /// <paramref name="definitionName"/> the type implements, directly or through its bases.
+    /// The distinct groups of every <c>IEndpoint&lt;TGroup&gt;</c> the type implements, directly
+    /// or through its bases.
     /// </summary>
-    private static ITypeSymbol[] TypeArguments(
-        INamedTypeSymbol type,
-        Compilation compilation,
-        string definitionName,
-        int position)
+    private static ITypeSymbol[] GroupsOf(INamedTypeSymbol type, Compilation compilation)
     {
-        INamedTypeSymbol? definition = compilation.GetTypeByMetadataName(definitionName);
+        INamedTypeSymbol? definition = compilation.GetTypeByMetadataName(GroupEndpointName);
         if (definition is null)
         {
             return [];
@@ -185,7 +160,7 @@ internal static class EndpointModelBuilder
                 .Where(item => SymbolEqualityComparer.Default.Equals(
                     item.OriginalDefinition,
                     definition))
-                .Select(item => item.TypeArguments[position])
+                .Select(item => item.TypeArguments[0])
                 .Distinct<ITypeSymbol>(SymbolEqualityComparer.Default),
         ];
     }

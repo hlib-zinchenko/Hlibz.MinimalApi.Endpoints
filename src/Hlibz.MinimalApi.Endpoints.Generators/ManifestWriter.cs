@@ -80,9 +80,6 @@ internal static class ManifestWriter
 
         foreach (EndpointModel endpoint in endpoints)
         {
-            string response = endpoint.ResponseTypeName is null
-                ? "null"
-                : $"typeof({endpoint.ResponseTypeName})";
             string description = endpoint.Description is null
                 ? "null"
                 : SymbolDisplay.FormatLiteral(endpoint.Description, quote: true);
@@ -93,7 +90,6 @@ internal static class ManifestWriter
                                 static () => new {{endpoint.TypeName}}(),
                                 typeof({{endpoint.GroupTypeName}}),
                                 static () => new {{endpoint.GroupTypeName}}(),
-                                {{response}},
                                 {{description}}),
 
                 """);

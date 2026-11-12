@@ -6,10 +6,6 @@ namespace Hlibz.MinimalApi.Endpoints;
 /// <param name="EndpointType">The endpoint type.</param>
 /// <param name="Endpoint">The endpoint instance.</param>
 /// <param name="GroupType">The group named in <see cref="IEndpoint{TGroup}"/>.</param>
-/// <param name="ResponseType">
-/// The success response named in <see cref="IEndpoint{TGroup, TResponse}"/>, or
-/// <see langword="null"/>.
-/// </param>
 /// <param name="Description">
 /// The endpoint type's XML <c>&lt;summary&gt;</c> as CommonMark, read from its source when it
 /// compiled, or <see langword="null"/> when it has none. <c>MapEndpoints</c> uses it as the
@@ -19,7 +15,6 @@ public sealed record EndpointDescriptor(
     Type EndpointType,
     IEndpoint Endpoint,
     Type GroupType,
-    Type? ResponseType,
     string? Description = null);
 
 /// <summary>

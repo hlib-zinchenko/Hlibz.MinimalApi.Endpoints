@@ -20,7 +20,7 @@ internal sealed class ListBooksQueryValidator : AbstractValidator<ListBooksQuery
 /// Lists the catalog, optionally only one author's books. Rate limited; an author name over
 /// 50 characters is a <c>400</c>.
 /// </summary>
-internal sealed class ListBooksEndpoint : IEndpoint<BooksEndpointGroup, Book[]>
+internal sealed class ListBooksEndpoint : IEndpoint<BooksEndpointGroup>
 {
     public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
         group.MapGet(string.Empty, Handle)

@@ -55,7 +55,6 @@ public static class EndpointDiscovery
                 registration.EndpointType,
                 registration.CreateEndpoint(),
                 registration.GroupType,
-                registration.ResponseType,
                 registration.Description));
         }
 

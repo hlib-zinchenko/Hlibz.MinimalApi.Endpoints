@@ -18,8 +18,9 @@ public abstract class EndpointManifestAttribute : Attribute
 }
 
 /// <summary>
-/// One endpoint in an <see cref="EndpointManifestAttribute"/>: its type, its group, response
-/// type and description, and how to create it and its group without reflection. Written by the source generator.
+/// One endpoint in an <see cref="EndpointManifestAttribute"/>: its type, its group and
+/// description, and how to create it and its group without reflection. Written by the source
+/// generator.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class EndpointRegistration
@@ -31,31 +32,6 @@ public sealed class EndpointRegistration
     /// <param name="createEndpoint">Creates the endpoint.</param>
     /// <param name="groupType">The group named in <see cref="IEndpoint{TGroup}"/>.</param>
     /// <param name="createGroup">Creates the group.</param>
-    /// <param name="responseType">
-    /// The success response named in <see cref="IEndpoint{TGroup, TResponse}"/>, or
-    /// <see langword="null"/>.
-    /// </param>
-    public EndpointRegistration(
-        Type endpointType,
-        Func<IEndpoint> createEndpoint,
-        Type groupType,
-        Func<IEndpointGroup> createGroup,
-        Type? responseType)
-        : this(endpointType, createEndpoint, groupType, createGroup, responseType, description: null)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EndpointRegistration"/> class.
-    /// </summary>
-    /// <param name="endpointType">The endpoint type.</param>
-    /// <param name="createEndpoint">Creates the endpoint.</param>
-    /// <param name="groupType">The group named in <see cref="IEndpoint{TGroup}"/>.</param>
-    /// <param name="createGroup">Creates the group.</param>
-    /// <param name="responseType">
-    /// The success response named in <see cref="IEndpoint{TGroup, TResponse}"/>, or
-    /// <see langword="null"/>.
-    /// </param>
     /// <param name="description">
     /// The endpoint type's XML <c>&lt;summary&gt;</c> as CommonMark, or <see langword="null"/>.
     /// </param>
@@ -64,7 +40,6 @@ public sealed class EndpointRegistration
         Func<IEndpoint> createEndpoint,
         Type groupType,
         Func<IEndpointGroup> createGroup,
-        Type? responseType,
         string? description)
     {
         ArgumentNullException.ThrowIfNull(endpointType);
@@ -76,7 +51,6 @@ public sealed class EndpointRegistration
         CreateEndpoint = createEndpoint;
         GroupType = groupType;
         CreateGroup = createGroup;
-        ResponseType = responseType;
         Description = description;
     }
 
@@ -99,12 +73,6 @@ public sealed class EndpointRegistration
     /// Gets the function that creates the group.
     /// </summary>
     public Func<IEndpointGroup> CreateGroup { get; }
-
-    /// <summary>
-    /// Gets the success response named in <see cref="IEndpoint{TGroup, TResponse}"/>, or
-    /// <see langword="null"/>.
-    /// </summary>
-    public Type? ResponseType { get; }
 
     /// <summary>
     /// Gets the endpoint type's XML <c>&lt;summary&gt;</c> as CommonMark, read from its source

@@ -16,8 +16,6 @@ public sealed class EndpointMapAnalyzerTests
 
         internal sealed record Book(int Id);
 
-        internal sealed record Other(int Id);
-
         """;
 
     [Theory]
@@ -139,20 +137,19 @@ public sealed class EndpointMapAnalyzerTests
     public async Task Analyze_WithMapOverriddenFromBaseClass_ChecksTheOverride()
     {
         AnalyzerRun run = await AnalyzerRun.OfAsync(Groups + """
-            internal abstract class BooksEndpoint<TResponse> : IEndpoint<BooksGroup, TResponse>
+            internal abstract class BooksEndpoint<T> : IEndpoint<BooksGroup>
             {
                 public abstract RouteHandlerBuilder Map(IEndpointRouteBuilder group);
             }
 
             internal sealed class CountBooksEndpoint : BooksEndpoint<int>
             {
-                public override RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
-                    group.MapGet("count", () => "many");
+                public override RouteHandlerBuilder Map(IEndpointRouteBuilder group) => null!;
             }
             """);
 
         Assert.Empty(run.CompileErrors());
-        Assert.Equal(["HMAE008"], run.DiagnosticIds);
+        Assert.Equal(["HMAE007"], run.DiagnosticIds);
     }
 
     [Fact]
@@ -169,92 +166,8 @@ public sealed class EndpointMapAnalyzerTests
         Assert.Empty(run.Diagnostics);
     }
 
-    [Theory]
-    [InlineData("() => TypedResults.NoContent()", "Microsoft.AspNetCore.Http.HttpResults.NoContent")]
-    [InlineData("() => TypedResults.Ok(new Other(1))", "Microsoft.AspNetCore.Http.HttpResults.Ok<App.Other>")]
-    [InlineData("() => { }", "void")]
-    [InlineData("""() => TypedResults.File(new byte[1], "text/csv")""", "Microsoft.AspNetCore.Http.HttpResults.FileContentHttpResult")]
-    [InlineData("HandleAsync", "System.Threading.Tasks.Task")]
-    public async Task Analyze_WithHandlerNotReturningResponseType_ReportsHmae008(
-        string handler,
-        string returnType)
-    {
-        AnalyzerRun run = await AnalyzerRun.OfAsync(Groups + ResponseEndpoint("Book", handler));
-
-        Assert.Empty(run.CompileErrors());
-        Diagnostic diagnostic = Assert.Single(run.Diagnostics);
-        Assert.Equal("HMAE008", diagnostic.Id);
-        Assert.Equal(handler, run.SourceAt(diagnostic));
-        Assert.StartsWith(
-            $"App.GetBookEndpoint's handler returns {returnType}, which doesn't carry the "
-            + "endpoint's response type App.Book",
-            diagnostic.GetMessage(CultureInfo.InvariantCulture),
-            StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData("() => Results.Ok(new Book(1))", "returns Microsoft.AspNetCore.Http.IResult")]
-    [InlineData("HandleResultAsync", "returns System.Threading.Tasks.Task<Microsoft.AspNetCore.Http.IResult>")]
-    [InlineData("HandleObject", "returns object")]
-    [InlineData("Handler", "isn't a method group or lambda")]
-    public async Task Analyze_WithHandlerTheBuildCantCheck_ReportsHmae009(
-        string handler,
-        string reason)
-    {
-        AnalyzerRun run = await AnalyzerRun.OfAsync(Groups + ResponseEndpoint("Book", handler));
-
-        Assert.Empty(run.CompileErrors());
-        Diagnostic diagnostic = Assert.Single(run.Diagnostics);
-        Assert.Equal("HMAE009", diagnostic.Id);
-        Assert.Equal(handler, run.SourceAt(diagnostic));
-        Assert.StartsWith(
-            $"App.GetBookEndpoint declares the response type App.Book, but its handler {reason}",
-            diagnostic.GetMessage(CultureInfo.InvariantCulture),
-            StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData("Book", "() => new Book(1)")]
-    [InlineData("Book", "() => Task.FromResult(new Book(1))")]
-    [InlineData("Book", "() => ValueTask.FromResult(new Book(1))")]
-    [InlineData("Book", "() => TypedResults.Ok(new Book(1))")]
-    [InlineData("Book", """() => TypedResults.Created("/api/books/1", new Book(1))""")]
-    [InlineData("Book", "HandleUnion")]
-    [InlineData("Book", "HandleUnionAsync")]
-    [InlineData("Book", "HandleNullable")]
-    [InlineData("Book?", "() => TypedResults.Ok(new Book(1))")]
-    [InlineData("Book[]", "() => TypedResults.Ok(new[] { new Book(1) })")]
-    [InlineData("int", "() => TypedResults.Ok(1)")]
-    public async Task Analyze_WithHandlerReturningResponseType_ReportsNothing(
-        string response,
-        string handler)
-    {
-        AnalyzerRun run = await AnalyzerRun.OfAsync(Groups + ResponseEndpoint(response, handler));
-
-        Assert.Empty(run.CompileErrors());
-        Assert.Empty(run.Diagnostics);
-    }
-
     [Fact]
-    public async Task Analyze_WithResponseTypeFromGenericBase_ComparesTheTypeParameter()
-    {
-        AnalyzerRun run = await AnalyzerRun.OfAsync(Groups + """
-            internal abstract class GetEndpoint<TResponse> : IEndpoint<BooksGroup, TResponse>
-                where TResponse : new()
-            {
-                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
-                    group.MapGet("", () => TypedResults.Ok(new TResponse()));
-            }
-
-            internal sealed class GetOtherEndpoint : GetEndpoint<List<int>>;
-            """);
-
-        Assert.Empty(run.CompileErrors());
-        Assert.Empty(run.Diagnostics);
-    }
-
-    [Fact]
-    public async Task Analyze_WithoutResponseType_AcceptsAnyHandler()
+    public async Task Analyze_WithAnyHandler_ReportsNothing()
     {
         AnalyzerRun run = await AnalyzerRun.OfAsync(Groups + """
             internal sealed class PingEndpoint : IEndpoint<BooksGroup>
@@ -267,49 +180,4 @@ public sealed class EndpointMapAnalyzerTests
         Assert.Empty(run.CompileErrors());
         Assert.Empty(run.Diagnostics);
     }
-
-    [Fact]
-    public async Task Analyze_WithHmae009Suppressed_ReportsNothing()
-    {
-        AnalyzerRun run = await AnalyzerRun.OfAsync(Groups + """
-            internal sealed class GetBookEndpoint : IEndpoint<BooksGroup, Book>
-            {
-            #pragma warning disable HMAE009 // Answers through a shared result helper.
-                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
-                    group.MapGet("", () => Results.Ok(new Book(1)));
-            #pragma warning restore HMAE009
-            }
-            """);
-
-        Assert.Empty(run.CompileErrors());
-        Assert.Empty(run.Diagnostics);
-    }
-
-    private static string ResponseEndpoint(string response, string handler) => $$"""
-        internal sealed class GetBookEndpoint : IEndpoint<BooksGroup, {{response}}>
-        {
-            private static Delegate Handler => () => new Book(1);
-
-            public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
-                group.MapGet("", {{handler}});
-
-            private static Task HandleAsync() => Task.CompletedTask;
-
-            private static Task<IResult> HandleResultAsync() =>
-                Task.FromResult<IResult>(Results.Ok(new Book(1)));
-
-            private static object HandleObject() => new Book(1);
-
-            private static Book? HandleNullable() => null;
-
-            private static Results<Ok<Book>, NotFound> HandleUnion(int id) =>
-                id > 0 ? TypedResults.Ok(new Book(id)) : TypedResults.NotFound();
-
-            private static async Task<Results<Ok<Book>, NotFound>> HandleUnionAsync(int id)
-            {
-                await Task.Yield();
-                return TypedResults.NotFound();
-            }
-        }
-        """;
 }

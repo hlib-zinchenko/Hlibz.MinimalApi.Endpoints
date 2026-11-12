@@ -5,8 +5,9 @@ namespace Hlibz.MinimalApi.Endpoints.Generators;
 /// <summary>
 /// The build errors and warnings: endpoints the generator can't list (<c>HMAE001</c>-<c>HMAE006</c>,
 /// each a startup failure when discovery used reflection, and <c>HMAE010</c>/<c>HMAE011</c>,
-/// once silently left out), and <c>Map</c> bodies the analyzer rejects
-/// (<c>HMAE007</c>-<c>HMAE009</c>).
+/// once silently left out), and <c>Map</c> bodies the analyzer rejects (<c>HMAE007</c>).
+/// <c>HMAE003</c>, <c>HMAE008</c> and <c>HMAE009</c> are retired: they checked the endpoint's
+/// response type, which endpoints no longer declare.
 /// </summary>
 internal static class Diagnostics
 {
@@ -25,14 +26,6 @@ internal static class Diagnostics
         "HMAE002",
         "Endpoint names more than one group",
         "{0} names more than one endpoint group: {1}");
-
-    /// <summary>
-    /// HMAE003: the endpoint names more than one response type.
-    /// </summary>
-    public static readonly DiagnosticDescriptor ManyResponseTypes = Error(
-        "HMAE003",
-        "Endpoint names more than one response type",
-        "{0} names more than one response type: {1}");
 
     /// <summary>
     /// HMAE004: the endpoint or its group has no parameterless constructor the generated code can
@@ -66,24 +59,6 @@ internal static class Diagnostics
         "HMAE007",
         "Map must map exactly one route",
         Messages.MapsNotOneRouteText);
-
-    /// <summary>
-    /// HMAE008: the handler of an endpoint with a response type returns something that doesn't
-    /// carry it.
-    /// </summary>
-    public static readonly DiagnosticDescriptor HandlerResponseMismatch = Error(
-        "HMAE008",
-        "Handler doesn't return the endpoint's response type",
-        Messages.HandlerResponseMismatchText);
-
-    /// <summary>
-    /// HMAE009: the handler of an endpoint with a response type returns something the build can't
-    /// check against it.
-    /// </summary>
-    public static readonly DiagnosticDescriptor HandlerResponseUnchecked = Error(
-        "HMAE009",
-        "Handler's response can't be checked",
-        Messages.HandlerResponseUncheckedText);
 
     /// <summary>
     /// HMAE010: the endpoint is a struct.
@@ -133,8 +108,8 @@ internal static class Diagnostics
             "https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints#build-errors";
 
         public const string NoGroupText =
-            "{0} implements IEndpoint directly; implement IEndpoint<TGroup> or "
-            + "IEndpoint<TGroup, TResponse> instead";
+            "{0} implements IEndpoint directly; implement IEndpoint<TGroup> "
+            + "instead";
 
         public const string NoParameterlessConstructorText =
             "{0} has no public or internal parameterless constructor; endpoints and endpoint "
@@ -145,16 +120,6 @@ internal static class Diagnostics
             "{0}.Map must map exactly one route: one MapGet, MapPost, MapPut, MapDelete, MapPatch "
             + "or MapMethods call on its group parameter, outside loops and lambdas, using the "
             + "parameter nowhere else";
-
-        public const string HandlerResponseMismatchText =
-            "{0}'s handler returns {1}, which doesn't carry the endpoint's response type {2}; "
-            + "return {2} or a typed result carrying it, such as Ok<{2}>, or implement "
-            + "IEndpoint<TGroup> instead";
-
-        public const string HandlerResponseUncheckedText =
-            "{0} declares the response type {1}, but its handler {2}, so the build can't check "
-            + "it; return a typed result such as Ok<{1}> or Results<Ok<{1}>, NotFound>, or "
-            + "implement IEndpoint<TGroup> instead";
 
         public const string GenericEndpointText =
             "{0} is generic or nested in a generic type, so it is never mapped; make it abstract "
