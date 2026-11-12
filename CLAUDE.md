@@ -27,9 +27,11 @@ Two NuGet packages released together from one tag:
 - `src/Hlibz.MinimalApi.Endpoints.Generators`: the incremental source generator and, beside it,
   `EndpointMapAnalyzer` (netstandard2.0, Roslyn 4.8, never packed on its own). The generator
   writes one `EndpointManifest_<AssemblyName>` per compilation that references the library and
-  reports unusable endpoints as `HMAE001`-`HMAE006`; the analyzer reads each `Map` body's
+  reports unusable endpoints as `HMAE001`-`HMAE006`, struct endpoints as `HMAE010` and
+  generic ones (never mapped; abstract bases are skipped) as the warning `HMAE011`; the
+  analyzer reads each `Map` body's
   operation tree and reports `HMAE007` (not exactly one route), `HMAE008`/`HMAE009` (handler
-  doesn't return / can't be checked against `TResponse`). All are build errors
+  doesn't return / can't be checked against `TResponse`). All but `HMAE011` are build errors
   (`Diagnostics.cs`, `AnalyzerReleases.Unshipped.md`, the README's "Build errors").
   The library packs it under `analyzers/dotnet/cs` plus `buildTransitive/*.targets`, which adds
   it to projects that get the package indirectly (NuGet withholds analyzers there). Tests,

@@ -20,6 +20,7 @@ public sealed class EndpointManifestGenerator : IIncrementalGenerator
             .CreateSyntaxProvider(
                 static (node, _) => node
                     is ClassDeclarationSyntax { BaseList: not null }
+                    or StructDeclarationSyntax { BaseList: not null }
                     or RecordDeclarationSyntax { BaseList: not null },
                 static (syntaxContext, cancellationToken) =>
                     EndpointModelBuilder.Build(syntaxContext, cancellationToken))

@@ -50,6 +50,47 @@ public sealed class EndpointManifestGeneratorTests
     }
 
     [Fact]
+    public void Generate_WithGroupsInterleaved_DiscoversGroupsInOrderFirstFound()
+    {
+        GeneratorRun run = GeneratorRun.Of(Groups + """
+            internal sealed class UsersGroup : IEndpointGroup
+            {
+                public string Prefix => "api/users";
+            }
+
+            internal sealed class ListOrdersEndpoint : IEndpoint<OrdersGroup>
+            {
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
+            }
+
+            internal sealed class ListUsersEndpoint : IEndpoint<UsersGroup>
+            {
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
+            }
+
+            internal sealed class CountOrdersEndpoint : IEndpoint<OrdersGroup>
+            {
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("count", () => Results.Ok());
+            }
+            """);
+
+        IReadOnlyList<EndpointGroupDescriptor> groups = EndpointDiscovery.Discover([run.Load()]);
+
+        Assert.Equal(
+            ["App.OrdersGroup", "App.UsersGroup"],
+            groups.Select(group => group.GroupType.FullName));
+        Assert.Equal(
+            ["App.ListOrdersEndpoint", "App.CountOrdersEndpoint"],
+            groups[0].Endpoints.Select(endpoint => endpoint.EndpointType.FullName));
+        Assert.Equal(
+            ["App.ListUsersEndpoint"],
+            groups[1].Endpoints.Select(endpoint => endpoint.EndpointType.FullName));
+    }
+
+    [Fact]
     public void Generate_WithEndpointThroughBaseClass_ListsOnlyTheConcreteEndpoint()
     {
         GeneratorRun run = GeneratorRun.Of(Groups + """
@@ -366,6 +407,94 @@ public sealed class EndpointManifestGeneratorTests
             """);
 
         Assert.Contains("HMAE006", run.DiagnosticIds);
+    }
+
+    [Theory]
+    [InlineData("internal struct ListOrdersEndpoint : IEndpoint<OrdersGroup>")]
+    [InlineData("internal readonly record struct ListOrdersEndpoint : IEndpoint<OrdersGroup>")]
+    public void Generate_WithStructEndpoint_ReportsHmae010(string declaration)
+    {
+        GeneratorRun run = GeneratorRun.Of(Groups + $$"""
+            {{declaration}}
+            {
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
+            }
+            """);
+
+        Diagnostic diagnostic = Assert.Single(run.GeneratorDiagnostics);
+        Assert.Equal("HMAE010", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Equal("ListOrdersEndpoint", run.SourceAt(diagnostic));
+        Assert.Equal(
+            "App.ListOrdersEndpoint is a struct; an endpoint must be a class",
+            diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Empty(EndpointDiscovery.Discover([run.Load()]));
+    }
+
+    [Theory]
+    [InlineData(
+        "internal sealed class ListEndpoint<T> : IEndpoint<OrdersGroup>",
+        "App.ListEndpoint<T>")]
+    [InlineData(
+        "internal class ListEndpoint<T> : IEndpoint<OrdersGroup, T>",
+        "App.ListEndpoint<T>")]
+    public void Generate_WithGenericEndpoint_WarnsHmae011(string declaration, string name)
+    {
+        GeneratorRun run = GeneratorRun.Of(Groups + $$"""
+            {{declaration}}
+            {
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet("", () => Results.Ok());
+            }
+            """);
+
+        Diagnostic diagnostic = Assert.Single(run.GeneratorDiagnostics);
+        Assert.Equal("HMAE011", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
+        Assert.Equal("ListEndpoint", run.SourceAt(diagnostic));
+        Assert.StartsWith(
+            $"{name} is generic or nested in a generic type, so it is never mapped",
+            diagnostic.GetMessage(CultureInfo.InvariantCulture),
+            StringComparison.Ordinal);
+        Assert.Empty(EndpointDiscovery.Discover([run.Load()]));
+    }
+
+    [Fact]
+    public void Generate_WithEndpointNestedInGenericType_WarnsHmae011()
+    {
+        GeneratorRun run = GeneratorRun.Of(Groups + """
+            internal static class Outer<T>
+            {
+                internal sealed class ListOrdersEndpoint : IEndpoint<OrdersGroup>
+                {
+                    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                        group.MapGet("", () => Results.Ok());
+                }
+            }
+            """);
+
+        Assert.Equal(["HMAE011"], run.DiagnosticIds);
+        Assert.Empty(EndpointDiscovery.Discover([run.Load()]));
+    }
+
+    [Fact]
+    public void Generate_WithGenericBaseMadeAbstract_ListsDerivedEndpointWithoutWarning()
+    {
+        GeneratorRun run = GeneratorRun.Of(Groups + """
+            internal abstract class ListEndpoint<T> : IEndpoint<OrdersGroup>
+            {
+                public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
+                    group.MapGet(typeof(T).Name, () => Results.Ok());
+            }
+
+            internal sealed class ListOrdersEndpoint : ListEndpoint<OrderDto>;
+            """);
+
+        Assert.Empty(run.GeneratorDiagnostics);
+        EndpointDescriptor endpoint = Assert.Single(
+            Assert.Single(EndpointDiscovery.Discover([run.Load()])).Endpoints);
+        Assert.Equal("App.ListOrdersEndpoint", endpoint.EndpointType.FullName);
     }
 
     [Fact]

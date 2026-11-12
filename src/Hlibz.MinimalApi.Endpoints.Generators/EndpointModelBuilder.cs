@@ -22,13 +22,14 @@ internal static class EndpointModelBuilder
             SymbolDisplayMiscellaneousOptions.ExpandValueTuple);
 
     /// <summary>
-    /// Describes the class declared at <paramref name="context"/>'s node.
+    /// Describes the class or struct declared at <paramref name="context"/>'s node.
     /// </summary>
-    /// <param name="context">The class declaration and its semantic model.</param>
+    /// <param name="context">The type declaration and its semantic model.</param>
     /// <param name="cancellationToken">Stops the work.</param>
     /// <returns>
-    /// The endpoint, or <see langword="null"/> when the class isn't a concrete, non-generic
-    /// endpoint (or doesn't compile yet).
+    /// The endpoint, or <see langword="null"/> when the type isn't an endpoint, is abstract (a
+    /// base for endpoints), or doesn't compile yet. A struct or generic endpoint comes back
+    /// with the diagnostic saying it is never mapped.
     /// </returns>
     public static EndpointModel? Build(
         GeneratorSyntaxContext context,
@@ -37,12 +38,22 @@ internal static class EndpointModelBuilder
         Compilation compilation = context.SemanticModel.Compilation;
         if (context.Node is not TypeDeclarationSyntax declaration
             || context.SemanticModel.GetDeclaredSymbol(declaration, cancellationToken)
-                is not INamedTypeSymbol { TypeKind: TypeKind.Class, IsAbstract: false } type
-            || IsGeneric(type)
+                is not INamedTypeSymbol { TypeKind: TypeKind.Class or TypeKind.Struct } type
+            || type.IsAbstract
             || compilation.GetTypeByMetadataName(EndpointName) is not { } endpointInterface
             || !type.AllInterfaces.Contains(endpointInterface, SymbolEqualityComparer.Default))
         {
             return null;
+        }
+
+        if (type.TypeKind == TypeKind.Struct)
+        {
+            return Unlisted(type, declaration, Diagnostics.StructEndpoint);
+        }
+
+        if (IsGeneric(type))
+        {
+            return Unlisted(type, declaration, Diagnostics.GenericEndpoint);
         }
 
         ITypeSymbol[] groups = TypeArguments(type, compilation, GroupEndpointName, 0);
@@ -111,8 +122,31 @@ internal static class EndpointModelBuilder
     }
 
     /// <summary>
-    /// Whether the type or a type it is nested in has type parameters: an open generic type is a
-    /// base for endpoints rather than one, as reflection discovery treated it too.
+    /// An endpoint that can't be listed for what it is, not for what it names, so nothing else
+    /// about it is checked.
+    /// </summary>
+    private static EndpointModel Unlisted(
+        INamedTypeSymbol type,
+        TypeDeclarationSyntax declaration,
+        DiagnosticDescriptor descriptor)
+    {
+        return new EndpointModel(
+            type.ToDisplayString(TypeOfFormat),
+            string.Empty,
+            ResponseTypeName: null,
+            Description: null,
+            new EquatableArray<DiagnosticInfo>(
+            [
+                DiagnosticInfo.Create(
+                    descriptor,
+                    declaration.Identifier.GetLocation(),
+                    type.ToDisplayString()),
+            ]));
+    }
+
+    /// <summary>
+    /// Whether the type or a type it is nested in has type parameters: it can't be created
+    /// without them, so it is never mapped.
     /// </summary>
     private static bool IsGeneric(INamedTypeSymbol type)
     {

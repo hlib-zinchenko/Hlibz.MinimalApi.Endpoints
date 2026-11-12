@@ -243,8 +243,10 @@ references it, directly or through another project or package, and writes the li
 assembly's endpoints into the assembly: each concrete, non-generic class implementing
 `IEndpoint<TGroup>` (directly or through a base class), its group and response type, and a
 `new` for each. `MapEndpoints` and `EndpointDiscovery` only read that list, so discovery adds
-no reflection scan to startup and is trimming- and Native AOT-safe. Abstract and open generic
-classes are bases for endpoints, not endpoints, and are left out.
+no reflection scan to startup and is trimming- and Native AOT-safe. Abstract classes are bases
+for endpoints, not endpoints, and are left out. A struct endpoint is a build error (`HMAE010`),
+and a generic one, which can't be created, a warning (`HMAE011`): make it `abstract` if it is
+a base.
 
 An assembly passed to `MapEndpoints` that wasn't compiled with the generator fails at startup
 with a message saying so.
@@ -252,7 +254,8 @@ with a message saying so.
 ## Build errors
 
 An endpoint the generator can't list fails the build, pointing at the class, and so does a
-`Map` the analyzer rejects, pointing at `Map` or its handler:
+`Map` the analyzer rejects, pointing at `Map` or its handler. Only `HMAE011` is a warning (an
+error too when your project treats warnings as errors):
 
 | Id | Cause |
 |---|---|
@@ -265,6 +268,8 @@ An endpoint the generator can't list fails the build, pointing at the class, and
 | `HMAE007` | `Map` doesn't map exactly one route: it must call `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` once on its group parameter, outside loops and lambdas, and use the parameter nowhere else (no `MapGroup`, no helper taking it). |
 | `HMAE008` | The handler of an `IEndpoint<TGroup, TResponse>` returns something that doesn't carry `TResponse`: another type, `void`, `Task`, `NoContent`, `Ok<Other>`. |
 | `HMAE009` | The handler of an `IEndpoint<TGroup, TResponse>` can't be checked: it returns `IResult`, `object` or `dynamic` (or a `Task` of one), or isn't a method group or lambda. Return a typed result such as `Ok<T>` or `Results<Ok<T>, NotFound>`, or implement `IEndpoint<TGroup>` instead. |
+| `HMAE010` | The endpoint is a struct (a `record struct` too); endpoints are classes. |
+| `HMAE011` | **Warning.** The endpoint is generic, or nested in a generic type, so it is never mapped. Make it `abstract` if it is a base for endpoints, and derive non-generic endpoints from it. |
 
 A handler carries `TResponse` when it returns `TResponse`, a typed result of it (`Ok<T>`,
 `Created<T>`, ...), or a `Results<...>` with such an arm, optionally in a `Task<>` or

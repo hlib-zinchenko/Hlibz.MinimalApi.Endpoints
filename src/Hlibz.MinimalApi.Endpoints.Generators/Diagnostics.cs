@@ -3,8 +3,9 @@ using Microsoft.CodeAnalysis;
 namespace Hlibz.MinimalApi.Endpoints.Generators;
 
 /// <summary>
-/// The build errors: endpoints the generator can't list (<c>HMAE001</c>-<c>HMAE006</c>, each a
-/// startup failure when discovery used reflection), and <c>Map</c> bodies the analyzer rejects
+/// The build errors and warnings: endpoints the generator can't list (<c>HMAE001</c>-<c>HMAE006</c>,
+/// each a startup failure when discovery used reflection, and <c>HMAE010</c>/<c>HMAE011</c>,
+/// once silently left out), and <c>Map</c> bodies the analyzer rejects
 /// (<c>HMAE007</c>-<c>HMAE009</c>).
 /// </summary>
 internal static class Diagnostics
@@ -84,13 +85,40 @@ internal static class Diagnostics
         "Handler's response can't be checked",
         Messages.HandlerResponseUncheckedText);
 
+    /// <summary>
+    /// HMAE010: the endpoint is a struct.
+    /// </summary>
+    public static readonly DiagnosticDescriptor StructEndpoint = Error(
+        "HMAE010",
+        "Endpoint is a struct",
+        "{0} is a struct; an endpoint must be a class");
+
+    /// <summary>
+    /// HMAE011: the endpoint is generic, or nested in a generic type, so it is never mapped. A
+    /// warning: a generic class can be a base for endpoints, which <c>abstract</c> says.
+    /// </summary>
+    public static readonly DiagnosticDescriptor GenericEndpoint = Warning(
+        "HMAE011",
+        "Generic endpoint is never mapped",
+        Messages.GenericEndpointText);
+
     private static DiagnosticDescriptor Error(string id, string title, string message) =>
+        Descriptor(id, title, message, DiagnosticSeverity.Error);
+
+    private static DiagnosticDescriptor Warning(string id, string title, string message) =>
+        Descriptor(id, title, message, DiagnosticSeverity.Warning);
+
+    private static DiagnosticDescriptor Descriptor(
+        string id,
+        string title,
+        string message,
+        DiagnosticSeverity severity) =>
         new(
             id,
             title,
             message,
             Messages.Category,
-            DiagnosticSeverity.Error,
+            severity,
             isEnabledByDefault: true,
             helpLinkUri: Messages.HelpLink);
 
@@ -127,6 +155,10 @@ internal static class Diagnostics
             "{0} declares the response type {1}, but its handler {2}, so the build can't check "
             + "it; return a typed result such as Ok<{1}> or Results<Ok<{1}>, NotFound>, or "
             + "implement IEndpoint<TGroup> instead";
+
+        public const string GenericEndpointText =
+            "{0} is generic or nested in a generic type, so it is never mapped; make it abstract "
+            + "if it is a base for endpoints, and derive non-generic endpoints from it";
 
         public const string InaccessibleText =
             "{0} isn't accessible to the generated endpoint list; make it, and any type it is "
