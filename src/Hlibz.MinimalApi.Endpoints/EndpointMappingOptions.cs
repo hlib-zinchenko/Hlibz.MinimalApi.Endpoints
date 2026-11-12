@@ -27,8 +27,9 @@ public sealed class EndpointMappingOptions
 
     /// <summary>
     /// Gets or sets how an endpoint type is turned into its route name (<c>WithName</c>, which
-    /// is also its OpenAPI operation id), or returns <see langword="null"/> for no name. Defaults
-    /// to <see cref="DefaultEndpointName"/>.
+    /// is also its OpenAPI operation id), or returns <see langword="null"/> for no name. Used for
+    /// every endpoint whose <see cref="IEndpoint.Name"/> is <see langword="null"/>. Defaults to
+    /// <see cref="DefaultEndpointName"/>.
     /// </summary>
     public Func<Type, string?> EndpointName { get; set; } = DefaultEndpointName;
 

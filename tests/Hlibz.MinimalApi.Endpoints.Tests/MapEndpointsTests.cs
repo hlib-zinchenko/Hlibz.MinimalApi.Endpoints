@@ -22,6 +22,9 @@ public sealed class MapEndpointsTests
     private const string DuplicateNames =
         "Hlibz.MinimalApi.Endpoints.Tests.Fixtures.DuplicateNames";
 
+    private const string ExplicitNames =
+        "Hlibz.MinimalApi.Endpoints.Tests.Fixtures.ExplicitNames";
+
     [Fact]
     public async Task MapEndpoints_WithGroupPrefix_ServesEndpointUnderPrefix()
     {
@@ -94,6 +97,25 @@ public sealed class MapEndpointsTests
         Assert.Contains(typeof(Fixtures.DuplicateNames.Books.GetBookEndpoint).FullName!, exception.Message, StringComparison.Ordinal);
         Assert.Contains(typeof(Fixtures.DuplicateNames.Admin.GetBookEndpoint).FullName!, exception.Message, StringComparison.Ordinal);
         Assert.Contains("'GetBook'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithEndpointNameProperty_NamesEndpointWithIt()
+    {
+        await using WebApplication app = await TestApp.StartAsync(ExplicitNames);
+
+        Assert.Equal("api/admin/books/{id}", app.Endpoint("GetAdminBook").RoutePattern.RawText);
+        Assert.Equal("api/books/{id}", app.Endpoint("GetBook").RoutePattern.RawText);
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithEndpointNamePropertyAndNamingOption_PrefersProperty()
+    {
+        await using WebApplication app = await TestApp.StartAsync(
+            ExplicitNames,
+            options => options.EndpointName = _ => null);
+
+        Assert.Equal("api/admin/books/{id}", app.Endpoint("GetAdminBook").RoutePattern.RawText);
     }
 
     [Fact]

@@ -38,7 +38,8 @@ public static class EndpointRouteBuilderExtensions
     /// Maps every endpoint in <paramref name="assemblies"/> into its route group: each group once
     /// (<c>MapGroup</c> with its prefix, tags, authorization and rate limiting, then
     /// <see cref="IEndpointGroup.Configure"/> and the group conventions), then each endpoint
-    /// (its method, route, handler and name, its documented responses, authorization, rate
+    /// (its method, route, handler and name (<see cref="IEndpoint.Name"/>, else
+    /// <see cref="EndpointMappingOptions.EndpointName"/>), its documented responses, authorization, rate
     /// limiting and upload limit, then <see cref="IEndpoint.Configure"/> and the endpoint
     /// conventions).
     /// </summary>
@@ -121,16 +122,15 @@ public static class EndpointRouteBuilderExtensions
         EndpointMappingOptions options,
         Dictionary<string, Type> names)
     {
-        string? name = options.EndpointName(descriptor.EndpointType);
+        IEndpoint endpoint = descriptor.Endpoint;
+        string? name = endpoint.Name ?? options.EndpointName(descriptor.EndpointType);
         if (name is not null && !names.TryAdd(name, descriptor.EndpointType))
         {
             throw new InvalidOperationException(
                 $"{names[name].FullName} and {descriptor.EndpointType.FullName} are both named "
-                + $"'{name}'. Rename one, or set {nameof(EndpointMappingOptions)}."
-                + $"{nameof(EndpointMappingOptions.EndpointName)} to tell them apart.");
+                + $"'{name}'. Give one its own {nameof(IEndpoint)}.{nameof(IEndpoint.Name)}.");
         }
 
-        IEndpoint endpoint = descriptor.Endpoint;
         RouteHandlerBuilder builder = groupBuilder.MapMethods(
             endpoint.Route,
             [endpoint.Method.Method],

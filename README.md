@@ -82,6 +82,7 @@ app.MapEndpoints(typeof(Program).Assembly);
 | `Method` | required | `HttpMethod.Get`, `.Post`, ... |
 | `Route` | required | Relative to the group prefix; `string.Empty` for the group root. |
 | `Handler` | required | The route handler delegate, bound exactly like `MapGet`'s. |
+| `Name` | `null` | The route name (and operation id); `null` uses the `EndpointName` option. |
 | `SuccessStatusCode` | `200` | The status `TResponse` and `FileContentType` are documented under (e.g. `201`). |
 | `ProducesErrors` | `[]` | Error statuses, documented with the error schema. |
 | `AuthorizationPolicy` | `null` | `RequireAuthorization(policy)`. |
@@ -92,10 +93,22 @@ app.MapEndpoints(typeof(Program).Assembly);
 
 `IEndpoint<TGroup>` maps the endpoint into `TGroup`; `IEndpoint<TGroup, TResponse>` also
 documents the success response. The route name is the class name minus a trailing
-`Endpoint`. Two endpoints given the same name (say `GetBookEndpoint` in two namespaces) fail
-`MapEndpoints` naming both types; rename one or set `EndpointName`. Endpoints and groups are created once, at startup, with their parameterless
-constructor (public or internal), so they hold no state: dependencies come in as handler
-parameters.
+`Endpoint`, unless the endpoint sets `Name`. Two endpoints with the same name (say
+`GetBookEndpoint` in a books group and an admin group) fail `MapEndpoints`, which names both
+types; give one its own `Name`:
+
+```csharp
+internal sealed class GetBookEndpoint : IEndpoint<AdminBooksEndpointGroup, BookDto>
+{
+    public HttpMethod Method => HttpMethod.Get;
+    public string Route => "{id}";
+    public Delegate Handler => (int id) => ...;
+    public string? Name => "GetAdminBook";
+}
+```
+
+Endpoints and groups are created once, at startup, with their parameterless constructor
+(public or internal), so they hold no state: dependencies come in as handler parameters.
 
 ## The group
 
@@ -138,7 +151,7 @@ app.MapEndpoints(assemblies, options =>
 | Option | Default |
 |---|---|
 | `ErrorResponseType` / `ErrorContentType` | `ProblemDetails`, `application/problem+json`; `null` type documents statuses without a body. |
-| `EndpointName` | `EndpointMappingOptions.DefaultEndpointName` (`GetOrderEndpoint` → `GetOrder`). |
+| `EndpointName` | `EndpointMappingOptions.DefaultEndpointName` (`GetOrderEndpoint` → `GetOrder`); endpoints that set `Name` keep it. |
 | `IncludeEndpoint` | every endpoint type. |
 | `DocumentAuthorizationResponses` / `DocumentRateLimitResponses` | `true`. |
 | `GroupConventions` / `EndpointConventions` | none; see below. |

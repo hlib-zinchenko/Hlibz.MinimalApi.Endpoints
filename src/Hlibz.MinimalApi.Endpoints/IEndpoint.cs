@@ -33,6 +33,14 @@ public interface IEndpoint
     Delegate Handler { get; }
 
     /// <summary>
+    /// Gets the endpoint's route name (<c>WithName</c>, which is also its OpenAPI operation id),
+    /// or <see langword="null"/> to name it with <see cref="EndpointMappingOptions.EndpointName"/>
+    /// (by default the class name minus a trailing <c>Endpoint</c>). Set it when two endpoint
+    /// classes share a name, e.g. <c>GetBookEndpoint</c> in a books group and an admin group.
+    /// </summary>
+    string? Name => null;
+
+    /// <summary>
     /// Gets the status code of the success response that <see cref="IEndpoint{TGroup, TResponse}"/>
     /// and <see cref="FileContentType"/> document. Defaults to <c>200</c>.
     /// </summary>
