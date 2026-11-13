@@ -50,8 +50,14 @@ public sealed class EndpointMapAnalyzerTests
             RouteHandlerBuilder Local() => group.MapGet("", () => Results.Ok());
         }
         """)]
-    [InlineData("=> Helper(group);")]
     [InlineData("""=> group.MapGroup("x").MapGet("", () => Results.Ok());""")]
+    [InlineData("""
+        {
+            Register(group);
+            return null!;
+        }
+        """)]
+    [InlineData("""=> Second("", group);""")]
     public async Task Analyze_WithMapNotMappingExactlyOneRoute_ReportsHmae007(string map)
     {
         AnalyzerRun run = await AnalyzerRun.OfAsync(Groups + $$"""
@@ -60,8 +66,11 @@ public sealed class EndpointMapAnalyzerTests
                 public RouteHandlerBuilder Map(IEndpointRouteBuilder group)
                 {{map}}
 
-                private static RouteHandlerBuilder Helper(IEndpointRouteBuilder builder) =>
+                private static void Register(IEndpointRouteBuilder builder) =>
                     builder.MapGet("", () => Results.Ok());
+
+                private static RouteHandlerBuilder Second(string pattern, IEndpointRouteBuilder builder) =>
+                    builder.MapGet(pattern, () => Results.Ok());
             }
             """);
 
@@ -94,6 +103,8 @@ public sealed class EndpointMapAnalyzerTests
             return builder;
         }
         """)]
+    [InlineData("=> Helper(group);")]
+    [InlineData("""=> group.MapList("").WithSummary("Lists the books.");""")]
     public async Task Analyze_WithMapMappingOneRoute_ReportsNothing(string map)
     {
         AnalyzerRun run = await AnalyzerRun.OfAsync(Groups + $$"""
@@ -101,6 +112,15 @@ public sealed class EndpointMapAnalyzerTests
             {
                 public RouteHandlerBuilder Map(IEndpointRouteBuilder group)
                 {{map}}
+
+                private static RouteHandlerBuilder Helper(IEndpointRouteBuilder builder) =>
+                    builder.MapGet("", () => Results.Ok());
+            }
+
+            internal static class RouteExtensions
+            {
+                public static RouteHandlerBuilder MapList(this IEndpointRouteBuilder builder, string pattern) =>
+                    builder.MapGet(pattern, () => Results.Ok());
             }
             """);
 

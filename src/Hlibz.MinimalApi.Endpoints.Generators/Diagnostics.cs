@@ -117,9 +117,10 @@ internal static class Diagnostics
             + "parameters";
 
         public const string MapsNotOneRouteText =
-            "{0}.Map must map exactly one route: one MapGet, MapPost, MapPut, MapDelete, MapPatch "
-            + "or MapMethods call on its group parameter, outside loops and lambdas, using the "
-            + "parameter nowhere else";
+            "{0}.Map must map exactly one route: one call on its group parameter that returns a "
+            + "RouteHandlerBuilder (MapGet, MapPost, MapPut, MapDelete, MapPatch, MapMethods, or an "
+            + "extension that maps one route), outside loops and lambdas, using the parameter "
+            + "nowhere else";
 
         public const string GenericEndpointText =
             "{0} is generic or nested in a generic type, so it is never mapped; make it abstract "

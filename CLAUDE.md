@@ -30,7 +30,9 @@ Two NuGet packages released together from one tag:
   reports unusable endpoints as `HMAE001`-`HMAE006`, struct endpoints as `HMAE010` and
   generic ones (never mapped; abstract bases are skipped) as the warning `HMAE011`; the
   analyzer reads each `Map` body's
-  operation tree and reports `HMAE007` (not exactly one route). There is no response type to
+  operation tree and reports `HMAE007` (not exactly one route: one call taking the group as its
+  first argument and returning a `RouteHandlerBuilder`, so an existing one-route extension such
+  as Hlibz.Results.AspNetCore's `MapErrorCodes()` is allowed; it trusts such a helper). There is no response type to
   check: the handler's return type is the contract, whatever result library it comes from
   (`HMAE003`/`HMAE008`/`HMAE009` are retired, don't reuse them). All but `HMAE011` are build errors
   (`Diagnostics.cs`, `AnalyzerReleases.Unshipped.md`, the README's "Build errors").

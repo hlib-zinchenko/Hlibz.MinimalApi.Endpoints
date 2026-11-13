@@ -8,7 +8,9 @@ namespace Hlibz.MinimalApi.Endpoints.Generators;
 
 /// <summary>
 /// Checks each endpoint's <c>IEndpoint.Map</c> body: it maps exactly one route on its group
-/// parameter (<c>HMAE007</c>).
+/// parameter (<c>HMAE007</c>). That's one call taking the group as its first argument and
+/// returning a <c>RouteHandlerBuilder</c>: <c>MapGet</c> and the like, or an existing extension
+/// that maps one route (<c>MapErrorCodes()</c>, say), which the analyzer trusts to map just one.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class EndpointMapAnalyzer : DiagnosticAnalyzer
@@ -90,8 +92,9 @@ public sealed class EndpointMapAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// The <c>MapGet</c>/<c>MapPost</c>/... call the group reference is the first argument of,
-    /// or <see langword="null"/> when the group is used any other way.
+    /// The call the group reference is the first argument of, when it returns a
+    /// <c>RouteHandlerBuilder</c> (one route's): <c>MapGet</c>/<c>MapPost</c>/..., or any other
+    /// method mapping one route. <see langword="null"/> when the group is used any other way.
     /// </summary>
     private static IInvocationOperation? RouteCallOf(
         IParameterReferenceOperation reference,
@@ -106,9 +109,6 @@ public sealed class EndpointMapAnalyzer : DiagnosticAnalyzer
         return operation.Parent
                    is IArgumentOperation { Parent: IInvocationOperation invocation } argument
                && argument.Parameter?.Ordinal == 0
-               && SymbolEqualityComparer.Default.Equals(
-                   invocation.TargetMethod.ContainingType,
-                   symbols.RouteExtensions)
                && SymbolEqualityComparer.Default.Equals(
                    invocation.TargetMethod.ReturnType,
                    symbols.RouteHandlerBuilder)
@@ -136,21 +136,15 @@ public sealed class EndpointMapAnalyzer : DiagnosticAnalyzer
     /// </summary>
     private sealed class KnownSymbols
     {
-        private KnownSymbols(
-            IMethodSymbol map,
-            INamedTypeSymbol routeHandlerBuilder,
-            INamedTypeSymbol routeExtensions)
+        private KnownSymbols(IMethodSymbol map, INamedTypeSymbol routeHandlerBuilder)
         {
             Map = map;
             RouteHandlerBuilder = routeHandlerBuilder;
-            RouteExtensions = routeExtensions;
         }
 
         public IMethodSymbol Map { get; }
 
         public INamedTypeSymbol RouteHandlerBuilder { get; }
-
-        public INamedTypeSymbol RouteExtensions { get; }
 
         /// <summary>
         /// Resolves the symbols, or returns <see langword="null"/> when the compilation doesn't
@@ -161,15 +155,12 @@ public sealed class EndpointMapAnalyzer : DiagnosticAnalyzer
             if (compilation.GetTypeByMetadataName("Hlibz.MinimalApi.Endpoints.IEndpoint")
                     ?.GetMembers("Map").OfType<IMethodSymbol>().FirstOrDefault() is not { } map
                 || compilation.GetTypeByMetadataName(
-                    "Microsoft.AspNetCore.Builder.RouteHandlerBuilder") is not { } builder
-                || compilation.GetTypeByMetadataName(
-                    "Microsoft.AspNetCore.Builder.EndpointRouteBuilderExtensions")
-                    is not { } extensions)
+                    "Microsoft.AspNetCore.Builder.RouteHandlerBuilder") is not { } builder)
             {
                 return null;
             }
 
-            return new KnownSymbols(map, builder, extensions);
+            return new KnownSymbols(map, builder);
         }
     }
 }

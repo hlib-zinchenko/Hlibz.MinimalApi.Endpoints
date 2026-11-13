@@ -78,7 +78,7 @@ app.MapEndpoints(typeof(Program).Assembly);
 
 | Member | Default | What it does |
 |---|---|---|
-| `Map(group)` | required | Maps the endpoint's one route on its group: a `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` call, relative to the group prefix (`""` for the group root), plus anything else chained on the builder. Returns that builder. |
+| `Map(group)` | required | Maps the endpoint's one route on its group: a `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` call, relative to the group prefix (`""` for the group root), or an extension that maps one route and returns its `RouteHandlerBuilder` (such as `group.MapErrorCodes(string.Empty)` from Hlibz.Results.AspNetCore), plus anything else chained on the builder. Returns that builder. |
 | `Name` | `null` | The route name (and operation id); `null` uses the `EndpointName` option. |
 
 `IEndpoint<TGroup>` maps the endpoint into `TGroup`. What the handler returns on success is
@@ -279,7 +279,7 @@ error too when your project treats warnings as errors):
 | `HMAE004` | The endpoint or its group has no public or internal parameterless constructor. |
 | `HMAE005` | The group is an interface or an abstract class. |
 | `HMAE006` | The endpoint or its group is private (or nested in a private type). |
-| `HMAE007` | `Map` doesn't map exactly one route: it must call `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` once on its group parameter, outside loops and lambdas, and use the parameter nowhere else (no `MapGroup`, no helper taking it). |
+| `HMAE007` | `Map` doesn't map exactly one route: it must make one call on its group parameter (the group as the first argument) that returns a `RouteHandlerBuilder`, outside loops and lambdas, and use the parameter nowhere else (no `MapGroup`). That's `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods`, or a helper or extension that maps one route, such as `MapErrorCodes()`; the analyzer can't see inside a helper, so one that maps several routes and returns the last one's builder isn't caught. |
 | `HMAE010` | The endpoint is a struct (a `record struct` too); endpoints are classes. |
 | `HMAE011` | **Warning.** The endpoint is generic, or nested in a generic type, so it is never mapped. Make it `abstract` if it is a base for endpoints, and derive non-generic endpoints from it. |
 
