@@ -22,11 +22,9 @@ jobs:
 
       - uses: actions/setup-dotnet@v5
         with:
-          # The SDK global.json pins, plus the runtimes of the older target frameworks.
+          # The SDK global.json pins, plus the .NET 10 runtime the net10.0 tests run on.
           global-json-file: global.json
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Restore
         run: dotnet restore
@@ -53,8 +51,12 @@ jobs:
             grep -q "<icon>icon.png</icon>" package.nuspec
           done
           test "$(ls ./artifacts/*.nupkg | wc -l)" -eq 2
-          # The source generator ships inside the main package, with the target that hands it
-          # to projects referencing the package indirectly.
+          # The source generator ships inside the main package, with the target that adds it to
+          # projects referencing the package indirectly if the SDK hasn't.
           unzip -l ./artifacts/Hlibz.MinimalApi.Endpoints.[0-9]*.nupkg > contents.txt
           grep -qE " analyzers/dotnet/cs/Hlibz\.MinimalApi\.Endpoints\.Generators\.dll$" contents.txt
           grep -qE " buildTransitive/Hlibz\.MinimalApi\.Endpoints\.targets$" contents.txt
+
+      # A project that gets the packages only indirectly compiles with the packed generator.
+      - name: Packed generator
+        run: .github/scripts/check-packed-generator.sh ./artifacts

@@ -39,4 +39,11 @@ options.AddFluentValidation(validation =>
 
 Works with FluentValidation 11.0.0 and later.
 
-Full documentation and a sample: [https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints).
+## Related packages
+
+- [Hlibz.MinimalApi.Endpoints](https://www.nuget.org/packages/Hlibz.MinimalApi.Endpoints): the
+  endpoints this validates.
+- [Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore): answer a
+  failure with `result.ToErrorResult().ToHttpResult()`, as above.
+
+Full documentation and samples: [github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints).

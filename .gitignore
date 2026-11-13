@@ -25,6 +25,9 @@ nupkg/
 [Ll]og/
 [Ll]ogs/
 
+# Claude Code
+.claude/
+
 # macOS
 .DS_Store
 artifacts/

@@ -39,15 +39,22 @@ and documents `200` as `OrderDto` (from the handler's return type) plus `404`, a
 `401`/`403` because it ends up requiring authorization. `429` is documented whenever it ends
 up rate limited, `413` for uploads (`.AcceptsUpload(maxBytes)`), and file downloads via
 `.ProducesFile(contentType)`. The endpoint class's XML `<summary>` becomes the operation
-description, read by the generator at compile time (no documentation file needed). Errors use `ProblemDetails` unless you set your own
-(`options.UseErrorResponse<TError>()`); app-wide rules go in group and endpoint conventions
-(`options.ConfigureGroups<IAdminEndpointGroup>(...)`).
+description, read by the generator at compile time (no documentation file needed). Errors use
+`ProblemDetails` unless you set your own (`options.UseErrorResponse<TError>()`); app-wide rules
+go in group and endpoint conventions (`options.ConfigureGroups<IAdminEndpointGroup>(...)`).
 
 Endpoints are listed and checked at compile time by a source generator and analyzer that ship
 inside the package: no assembly scan at startup, and an endpoint that can't be mapped (no
 group, no parameterless constructor, a `Map` that doesn't map exactly one route, ...) is a
 build error rather than a startup failure.
 
-Request validation: [Hlibz.MinimalApi.Endpoints.FluentValidation](https://www.nuget.org/packages/Hlibz.MinimalApi.Endpoints.FluentValidation).
+## Related packages
 
-Full documentation and a sample: [https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints).
+- [Hlibz.MinimalApi.Endpoints.FluentValidation](https://www.nuget.org/packages/Hlibz.MinimalApi.Endpoints.FluentValidation):
+  request validation with FluentValidation, with its `400` documented.
+- [Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore): one
+  error body for every failure, documented as the endpoints' error schema.
+- [Hlibz.OpenApi.AspNetCore](https://www.nuget.org/packages/Hlibz.OpenApi.AspNetCore): OpenAPI
+  transformers for rules, strongly typed IDs and security.
+
+Full documentation and samples: [github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints).
