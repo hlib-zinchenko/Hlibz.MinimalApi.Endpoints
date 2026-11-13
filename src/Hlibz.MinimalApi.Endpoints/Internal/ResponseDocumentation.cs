@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Hlibz.MinimalApi.Endpoints.Internal;
 
@@ -29,10 +31,11 @@ internal static class ResponseDocumentation
         builder.Finally(endpoint =>
         {
             IList<object> metadata = endpoint.Metadata;
+            IServiceProvider services = endpoint.ApplicationServices;
 
             DocumentErrors(metadata, errorType, errorContentType);
 
-            if (documentAuthorization && RequiresAuthorization(metadata))
+            if (documentAuthorization && RequiresAuthorization(metadata, FallbackPolicy(services)))
             {
                 AddIfMissing(
                     metadata,
@@ -42,7 +45,7 @@ internal static class ResponseDocumentation
                     Error(StatusCodes.Status403Forbidden, errorType, errorContentType));
             }
 
-            if (documentRateLimit && IsRateLimited(metadata))
+            if (documentRateLimit && IsRateLimited(metadata, HasGlobalLimiter(services)))
             {
                 AddIfMissing(
                     metadata,
@@ -51,13 +54,39 @@ internal static class ResponseDocumentation
         });
     }
 
-    internal static bool RequiresAuthorization(IList<object> metadata) =>
-        metadata.Any(item => item is IAuthorizeData or AuthorizationPolicy)
-        && !metadata.Any(item => item is IAllowAnonymous);
+    /// <summary>
+    /// Whether an endpoint ends up requiring authorization: it carries authorization metadata
+    /// (<c>[Authorize]</c>, <c>RequireAuthorization(...)</c>) or the app has a fallback policy,
+    /// and nothing makes it anonymous (<c>[AllowAnonymous]</c>, <c>AllowAnonymous()</c>). The
+    /// same rule as Hlibz.OpenApi.AspNetCore's security requirement, so the lock and the
+    /// <c>401</c>/<c>403</c> go on the same endpoints.
+    /// </summary>
+    /// <param name="metadata">The endpoint's metadata.</param>
+    /// <param name="fallbackPolicy">The app's fallback policy, if any.</param>
+    /// <returns>Whether a request needs to be authorized.</returns>
+    internal static bool RequiresAuthorization(
+        IList<object> metadata,
+        AuthorizationPolicy? fallbackPolicy) =>
+        !metadata.Any(item => item is IAllowAnonymous)
+        && (fallbackPolicy is not null
+            || metadata.Any(item => item is IAuthorizeData or AuthorizationPolicy));
 
-    internal static bool IsRateLimited(IList<object> metadata) =>
-        metadata.Any(item => item is EnableRateLimitingAttribute)
-        && !metadata.Any(item => item is DisableRateLimitingAttribute);
+    /// <summary>
+    /// Whether an endpoint ends up rate limited: it has a rate limiting policy or the app has a
+    /// global limiter, and it doesn't call <c>DisableRateLimiting()</c>, which turns off both.
+    /// </summary>
+    /// <param name="metadata">The endpoint's metadata.</param>
+    /// <param name="globalLimiter">Whether the app has a global limiter.</param>
+    /// <returns>Whether a request can be turned away with a <c>429</c>.</returns>
+    internal static bool IsRateLimited(IList<object> metadata, bool globalLimiter) =>
+        !metadata.Any(item => item is DisableRateLimitingAttribute)
+        && (globalLimiter || metadata.Any(item => item is EnableRateLimitingAttribute));
+
+    private static AuthorizationPolicy? FallbackPolicy(IServiceProvider services) =>
+        services.GetService<IOptions<AuthorizationOptions>>()?.Value.FallbackPolicy;
+
+    private static bool HasGlobalLimiter(IServiceProvider services) =>
+        services.GetService<IOptions<RateLimiterOptions>>()?.Value.GlobalLimiter is not null;
 
     private static ProducesResponseTypeMetadata Error(
         int statusCode,

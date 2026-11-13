@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Hlibz.MinimalApi.Endpoints.Tests;
@@ -15,11 +16,13 @@ internal static class TestApp
 {
     public static async Task<WebApplication> StartAsync(
         string fixtureNamespace,
-        Action<EndpointMappingOptions>? configure = null)
+        Action<EndpointMappingOptions>? configure = null,
+        Action<IServiceCollection>? configureServices = null)
     {
         WebApplicationBuilder builder = WebApplication.CreateSlimBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
+        configureServices?.Invoke(builder.Services);
 
         WebApplication app = builder.Build();
         app.MapEndpoints(

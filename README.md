@@ -149,10 +149,10 @@ A group is found through the endpoints that name it, so it can live in any assem
   ASP.NET inferred for the same status (the `NotFound` arm of `Results<Ok<T>, NotFound>`), and
   leaves a response the handler documents with a body of its own (`Conflict<T>`).
 * `401` and `403` whenever the endpoint **ends up** requiring authorization, whatever set it:
-  the endpoint, its group, a convention, or an outer `MapGroup`. `AllowAnonymous()` turns them
-  off again.
-* `429` whenever the endpoint ends up with a rate limiting policy and no
-  `DisableRateLimiting()`.
+  the endpoint, its group, a convention, an outer `MapGroup`, or the app's
+  `AuthorizationOptions.FallbackPolicy`. `AllowAnonymous()` turns them off again.
+* `429` whenever the endpoint ends up with a rate limiting policy, or the app has a global
+  limiter (`RateLimiterOptions.GlobalLimiter`), and no `DisableRateLimiting()`.
 * `413` on `AcceptsUpload`.
 
 The errors and gate responses are decided in a `Finally` convention, on the endpoint's final metadata, so

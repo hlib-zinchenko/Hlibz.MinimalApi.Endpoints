@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Threading.RateLimiting;
 
 using Hlibz.MinimalApi.Endpoints.Tests.Fixtures.Orders;
 
@@ -12,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hlibz.MinimalApi.Endpoints.Tests;
 
@@ -316,6 +318,62 @@ public sealed class MapEndpointsTests
     }
 
     [Fact]
+    public async Task MapEndpoints_WithFallbackPolicy_Documents401And403()
+    {
+        await using WebApplication app = await TestApp.StartAsync(
+            Orders,
+            configureServices: services => services.AddAuthorization(RequireUserByDefault));
+        RouteEndpoint endpoint = app.Endpoint("GetOrder");
+
+        Assert.Single(endpoint.Responses(StatusCodes.Status401Unauthorized));
+        Assert.Single(endpoint.Responses(StatusCodes.Status403Forbidden));
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithFallbackPolicyAndAllowAnonymous_DocumentsNo401()
+    {
+        await using WebApplication app = await TestApp.StartAsync(
+            Orders,
+            options => options.ConfigureEndpoints(context =>
+            {
+                if (context.EndpointType == typeof(GetOrderEndpoint))
+                {
+                    context.Builder.AllowAnonymous();
+                }
+            }),
+            services => services.AddAuthorization(RequireUserByDefault));
+
+        Assert.Empty(app.Endpoint("GetOrder").Responses(StatusCodes.Status401Unauthorized));
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithGlobalLimiter_Documents429()
+    {
+        await using WebApplication app = await TestApp.StartAsync(
+            Orders,
+            configureServices: services => services.AddRateLimiter(LimitEveryRequest));
+
+        Assert.Single(app.Endpoint("GetOrder").Responses(StatusCodes.Status429TooManyRequests));
+    }
+
+    [Fact]
+    public async Task MapEndpoints_WithGlobalLimiterAndDisableRateLimiting_DocumentsNo429()
+    {
+        await using WebApplication app = await TestApp.StartAsync(
+            Orders,
+            options => options.ConfigureEndpoints(context =>
+            {
+                if (context.EndpointType == typeof(GetOrderEndpoint))
+                {
+                    context.Builder.DisableRateLimiting();
+                }
+            }),
+            services => services.AddRateLimiter(LimitEveryRequest));
+
+        Assert.Empty(app.Endpoint("GetOrder").Responses(StatusCodes.Status429TooManyRequests));
+    }
+
+    [Fact]
     public async Task MapEndpoints_WithRequireRateLimitingInMap_RequiresItAndDocuments429()
     {
         await using WebApplication app = await TestApp.StartAsync(Orders);
@@ -437,6 +495,13 @@ public sealed class MapEndpointsTests
 
         Assert.Equal("GetOrder", endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName);
     }
+
+    private static void RequireUserByDefault(AuthorizationOptions options) =>
+        options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+
+    private static void LimitEveryRequest(RateLimiterOptions options) =>
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+            _ => RateLimitPartition.GetNoLimiter("all"));
 
     private static string? Description(RouteEndpoint endpoint) =>
         endpoint.Metadata.GetMetadata<IEndpointDescriptionMetadata>()?.Description;

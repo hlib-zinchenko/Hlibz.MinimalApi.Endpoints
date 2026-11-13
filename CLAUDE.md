@@ -19,7 +19,10 @@ Two NuGet packages released together from one tag:
   declared errors (`ProducesErrorMetadata`) and 401/403/429 are
   resolved by one `Finally` convention on the endpoint's final metadata
   (`Internal/ResponseDocumentation`), so they follow whatever set authorization or rate
-  limiting; keep it that way rather than inspecting the endpoint. The operation description
+  limiting; keep it that way rather than inspecting the endpoint. The app-wide gates count
+  too, read from `EndpointBuilder.ApplicationServices`: `AuthorizationOptions.FallbackPolicy`
+  (401/403; the same rule as Hlibz.OpenApi.AspNetCore's security requirement) and
+  `RateLimiterOptions.GlobalLimiter` (429). The operation description
   is the endpoint class's XML `<summary>`, which the generator reads from the comment trivia
   (`SummaryReader`, so it works without `GenerateDocumentationFile`) into the manifest
   (`EndpointRegistration.Description` → `EndpointDescriptor.Description`); a `Finally` in
