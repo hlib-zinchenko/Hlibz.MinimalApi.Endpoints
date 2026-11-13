@@ -16,8 +16,8 @@
 
   <!--
       The source generator ships inside this package (analyzers/dotnet/cs), plus a buildTransitive
-      target that hands it to projects referencing the package indirectly. Built first, never a
-      dependency of its own.
+      target that adds it to a project referencing the package indirectly if the SDK hasn't.
+      Built first, never a dependency of its own.
   -->
   <ItemGroup>
     <ProjectReference Include="..\Hlibz.MinimalApi.Endpoints.Generators\Hlibz.MinimalApi.Endpoints.Generators.csproj"

@@ -1,14 +1,14 @@
 <Project>
 
     <PropertyGroup>
-        <TargetFrameworks>net8.0;net10.0;net11.0</TargetFrameworks>
+        <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <!--
             One language version for every target framework, pinned rather than "latest" so the
-            build doesn't change with the installed SDK. C# 14 because the library multi-targets
-            net8.0-net11.0 from one source; C# 15 features (unions, closed hierarchies, with(...))
-            would not compile for the older targets.
+            build doesn't change with the installed SDK. C# 14 so the net10.0 target compiles from
+            the same source as net11.0; C# 15 features (unions, closed hierarchies, with(...)) would
+            not compile for net10.0.
         -->
         <LangVersion>14</LangVersion>
         <AnalysisMode>All</AnalysisMode>
@@ -30,7 +30,7 @@
 
     <!-- NuGet metadata shared by every package; each csproj sets its own PackageId, Description and tags. -->
     <PropertyGroup Label="NuGet metadata">
-        <Version>0.1.0</Version>
+        <Version>1.0.0-preview.4</Version>
         <Authors>Hlib Zinchenko</Authors>
         <Copyright>Copyright (c) 2026 Hlib Zinchenko</Copyright>
         <PackageReleaseNotes>https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/releases</PackageReleaseNotes>

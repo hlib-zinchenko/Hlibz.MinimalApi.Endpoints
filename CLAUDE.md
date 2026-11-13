@@ -35,7 +35,10 @@ Two NuGet packages released together from one tag:
   (`HMAE003`/`HMAE008`/`HMAE009` are retired, don't reuse them). All but `HMAE011` are build errors
   (`Diagnostics.cs`, `AnalyzerReleases.Unshipped.md`, the README's "Build errors").
   The library packs it under `analyzers/dotnet/cs` plus `buildTransitive/*.targets`, which adds
-  it to projects that get the package indirectly (NuGet withholds analyzers there). Tests,
+  it wherever it's missing (a guard: the .NET 10 and 11 SDKs already pass it on to indirect
+  consumers, despite pack's `exclude="Analyzers"`; checked on 10.0.201 and 11.0.100).
+  `.github/scripts/check-packed-generator.sh` (CI, after Pack) builds and runs an indirect
+  consumer of the packed nupkgs. Tests,
   samples and anything else in this repo reference it as `OutputItemType="Analyzer"`; its own
   tests (`tests/...Generators.Tests`, net11.0 only) compile sources in memory and load the result
   (`GeneratorRun`), or run the analyzer on them (`AnalyzerRun`).
@@ -63,7 +66,7 @@ Born from Lighthouse's `Common.API/Endpoints`; its admin-audience rules are conv
 ## Requires
 
 * The .NET SDK `global.json` pins (11.0.100, patches roll forward; Dependabot bumps it), plus
-  the .NET 8 and 10 runtimes to run every test target. Pinned because warnings are errors and
+  the .NET 10 runtime to run both test targets. Pinned because warnings are errors and
   `AnalysisMode=All`: a new SDK feature band brings new analyzer rules.
 
 ## Commands
@@ -87,8 +90,7 @@ don't break the others. Every fixture must pass the analyzer; invalid `Map` shap
 only as in-memory
 sources in `Generators.Tests`. Versions are central
 (`Directory.Packages.props`); the shared NuGet metadata and `Version` live in
-`Directory.Build.props`, release by pushing a `vX.Y.Z` tag (`release.yml` publishes to NuGet,
-then creates the GitHub release with generated notes, a pre-release for a suffixed version).
+`Directory.Build.props`, release by pushing a `vX.Y.Z` tag (see Releasing).
 Packing runs package validation (`EnablePackageValidation` in `src/Directory.Build.props`), so
 the API must match across target frameworks; add `PackageValidationBaselineVersion` once 1.0.0
 ships.
@@ -99,3 +101,14 @@ FluentValidation stays at the oldest version the add-on supports (11.0.0; Depend
 Each package has its own `src/<Package>/README.md` (packed by `src/Directory.Build.props`, shown
 on its nuget.org page): short, with absolute links. The root `README.md` is the full
 documentation; keep them in step when an API changes.
+
+## Releasing
+
+1. Set `Version` in `Directory.Build.props`, commit, then push the tag `vX.Y.Z`.
+2. The user approves the `release` environment run.
+3. Once the run succeeds and
+   `https://api.nuget.org/v3-flatcontainer/<lowercase id>/index.json` lists the version, Claude
+   creates the GitHub release that `PackageReleaseNotes` links to:
+   `gh release create vX.Y.Z --verify-tag --title X.Y.Z [--prerelease when the version has a suffix] --notes-file <notes>`.
+   Claude writes the notes from `git log <previous tag>..vX.Y.Z`: breaking changes first, then
+   features and fixes, then one nuget.org link per package. Nothing is attached.

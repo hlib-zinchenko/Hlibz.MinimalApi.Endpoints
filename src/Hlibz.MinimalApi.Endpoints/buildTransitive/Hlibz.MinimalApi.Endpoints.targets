@@ -2,10 +2,12 @@
 
   <!--
       MapEndpoints reads the endpoint list the package's source generator writes into every
-      assembly holding endpoints. NuGet hands a package's analyzers only to the projects that
-      reference it directly, so a project that gets this package through another one (an API
-      module referencing a shared project that references the package) would compile without the
-      generator. This adds it there, once.
+      assembly holding endpoints, so each of them must compile with the generator, including a
+      project that gets this package indirectly (through a project reference, or through another
+      package such as Hlibz.MinimalApi.Endpoints.FluentValidation). The .NET 10 and 11 SDKs
+      already hand it to such projects, even though pack declares package dependencies with
+      exclude="Analyzers". This is the guard for a build that doesn't: it adds the generator only
+      when it's missing, once.
   -->
   <Target Name="_HlibzMinimalApiEndpointsAddGenerator"
           AfterTargets="ResolvePackageDependenciesForBuild;ResolveNuGetPackageAssets">

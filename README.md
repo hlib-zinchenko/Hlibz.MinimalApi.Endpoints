@@ -18,7 +18,7 @@ remembered to write.
 | `Hlibz.MinimalApi.Endpoints` | `IEndpoint<TGroup>`, `IEndpointGroup`, `app.MapEndpoints(assemblies)`, `ProducesErrors`/`ProducesFile`/`AcceptsUpload`, group and endpoint conventions, `EndpointDiscovery`, and the source generator and analyzer that list and check the endpoints at compile time. No dependencies beyond ASP.NET Core. |
 | `Hlibz.MinimalApi.Endpoints.FluentValidation` | `options.AddFluentValidation()`: every handler parameter with a registered `IValidator<T>` is validated before the handler runs. |
 
-Targets .NET 8, 10 and 11 (the supported releases; a .NET 9 app gets the .NET 8 build).
+Targets .NET 10 and 11.
 
 ## Why
 
@@ -379,6 +379,25 @@ envelope documented as the success and error schema.
 dotnet run --project samples/Library.Api    # http://localhost:5190
 dotnet run --project samples/Envelope.Api   # http://localhost:5191
 ```
+
+## Related packages
+
+- [Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore): one
+  error body for every failure, the auth gate's included (see
+  [Using it with Hlibz.Results](#using-it-with-hlibzresults)).
+- [Hlibz.OpenApi.AspNetCore](https://www.nuget.org/packages/Hlibz.OpenApi.AspNetCore): OpenAPI
+  transformers (rules, strongly typed IDs, security, validation problems); its `Atlas.Api`
+  sample is built on this package.
+- [Hlibz.Paging](https://www.nuget.org/packages/Hlibz.Paging): paging and sorting for list
+  endpoints.
+
+## Versioning
+
+Every package in this repository is released under one version, from one `vX.Y.Z` tag.
+Dependencies are declared as minimums: FluentValidation 11.0.0 and later, and the source
+generator loads in any compiler from Roslyn 4.8 on, so a newer FluentValidation or SDK needs no
+new release here. Release notes are on
+[GitHub Releases](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/releases).
 
 ## License
 

@@ -14,36 +14,40 @@ jobs:
     environment: release
     permissions:
       id-token: write # required to request the OIDC token for NuGet Trusted Publishing
-      contents: write # required to create the GitHub release
+      contents: read
 
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v5
         with:
-          # The SDK global.json pins, plus the runtimes of the older target frameworks.
+          # The SDK global.json pins, plus the .NET 10 runtime the net10.0 tests run on.
           global-json-file: global.json
-          dotnet-version: |
-            8.0.x
-            10.0.x
-
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
-
-      - name: Test
-        run: dotnet test --no-build --configuration Release
+          dotnet-version: 10.0.x
 
       - name: Determine package version from tag
         id: version
         run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      # Both packages share the version, so one tag releases them together.
+      - name: Restore
+        run: dotnet restore
+
+      # Built once at the tag's version: the tests run on these binaries, and Pack packs them.
+      - name: Build
+        run: >
+          dotnet build
+          --no-restore
+          --configuration Release
+          -p:Version=${{ steps.version.outputs.value }}
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release
+
+      # Every package in the repo shares the version, so one tag releases them together.
       - name: Pack
         run: >
           dotnet pack
+          --no-build
           --configuration Release
           --output ./artifacts
           -p:Version=${{ steps.version.outputs.value }}
@@ -61,18 +65,3 @@ jobs:
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
 
-      # The page PackageReleaseNotes links to: notes GitHub generates from the changes since the
-      # previous tag, with the packages attached. A version with a suffix (1.0.0-preview.2) is
-      # marked as a pre-release.
-      - name: GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.value }}
-        run: |
-          prerelease=()
-          if [[ "$VERSION" == *-* ]]; then prerelease=(--prerelease); fi
-          gh release create "$GITHUB_REF_NAME" ./artifacts/*.nupkg ./artifacts/*.snupkg \
-            --verify-tag \
-            --title "$VERSION" \
-            --generate-notes \
-            "${prerelease[@]}"
