@@ -33,8 +33,8 @@
         <!-- Samples only (net11.0): the OpenAPI document showing what the endpoints document. -->
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
         <!-- Samples only: a ReDoc page rendering that document, at /api-docs. -->
-        <PackageVersion Include="Hlibz.Redoc.AspNetCore" Version="2.3.0" />
+        <PackageVersion Include="Hlibz.Redoc.AspNetCore" Version="2.5.0" />
         <!-- Samples only (Envelope.Api): Hlibz.Results' response envelope. -->
-        <PackageVersion Include="Hlibz.Results.AspNetCore" Version="1.1.0" />
+        <PackageVersion Include="Hlibz.Results.AspNetCore" Version="2.0.0" />
     </ItemGroup>
 </Project>
