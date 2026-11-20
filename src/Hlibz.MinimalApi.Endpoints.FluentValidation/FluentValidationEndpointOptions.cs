@@ -16,7 +16,11 @@ public sealed class FluentValidationEndpointOptions
     /// </summary>
     public Func<ValidationResult, HttpContext, IResult> OnFailure
     {
-        get => _onFailure;
+        get
+        {
+            return _onFailure;
+        }
+
         set
         {
             _onFailure = value;

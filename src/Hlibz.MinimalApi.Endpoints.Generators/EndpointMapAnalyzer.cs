@@ -106,14 +106,17 @@ public sealed class EndpointMapAnalyzer : DiagnosticAnalyzer
             operation = conversion;
         }
 
-        return operation.Parent
-                   is IArgumentOperation { Parent: IInvocationOperation invocation } argument
-               && argument.Parameter?.Ordinal == 0
-               && SymbolEqualityComparer.Default.Equals(
-                   invocation.TargetMethod.ReturnType,
-                   symbols.RouteHandlerBuilder)
-            ? invocation
-            : null;
+        if (operation.Parent
+                is IArgumentOperation { Parent: IInvocationOperation invocation } argument
+            && argument.Parameter?.Ordinal == 0
+            && SymbolEqualityComparer.Default.Equals(
+                invocation.TargetMethod.ReturnType,
+                symbols.RouteHandlerBuilder))
+        {
+            return invocation;
+        }
+
+        return null;
     }
 
     private static bool IsNestedInLoopOrFunction(IOperation operation)

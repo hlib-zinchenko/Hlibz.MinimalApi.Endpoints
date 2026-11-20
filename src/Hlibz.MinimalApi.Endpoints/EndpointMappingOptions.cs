@@ -90,8 +90,7 @@ public sealed class EndpointMappingOptions
         ArgumentNullException.ThrowIfNull(endpointType);
 
         string name = endpointType.Name;
-        return name.Length > EndpointSuffix.Length
-               && name.EndsWith(EndpointSuffix, StringComparison.Ordinal)
+        return name.Length > EndpointSuffix.Length && name.EndsWith(EndpointSuffix, StringComparison.Ordinal)
             ? name[..^EndpointSuffix.Length]
             : name;
     }
