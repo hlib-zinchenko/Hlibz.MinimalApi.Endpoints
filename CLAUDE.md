@@ -67,6 +67,13 @@ Born from Lighthouse's `Common.API/Endpoints`; its admin-audience rules are conv
 - `samples/Envelope.Api` (same rules, :5191): handlers return Hlibz.Results' `Result`/`Result<T>`;
   Hlibz.Results' `WithResultEnvelopes()` (applied in `ConfigureEndpoints`) sends and documents them
   as envelopes, `UseErrorResponse<ResultEnvelope>()` documents the errors.
+- `samples/Todo.Api` (same rules, :5192): where three packages meet. `Result`s as plain bodies
+  through Hlibz.Results' `WithResultResponses()` and `UseErrorResponse<ErrorResponse>()`;
+  success codes by method (`SuccessStatusCodes[DELETE] = 204` in `Program.cs`) and
+  `WithCreatedLocation` (201 + `Location`) on the create endpoints; Hlibz.OpenApi.AspNetCore's
+  XML documentation, strongly typed IDs, rules and description cleanup on the document. It
+  writes its XML file and copies the packages' (`GenerateDocumentationFile`,
+  `CopyDocumentationFilesFromPackages` in its csproj), unlike the other samples.
 
 ## Requires
 
@@ -83,6 +90,7 @@ dotnet test -f net11.0
 dotnet pack -c Release -o ./nupkg
 dotnet run --project samples/Library.Api    # :5190, try Library.Api.http
 dotnet run --project samples/Envelope.Api   # :5191, try Envelope.Api.http
+dotnet run --project samples/Todo.Api       # :5192, try Todo.Api.http
 ```
 
 ## Conventions

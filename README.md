@@ -353,7 +353,9 @@ internal sealed class GetBookEndpoint : IEndpoint<BooksEndpointGroup>
 ```
 
 `WithResultEnvelopes()` does the same for an API whose every response is an envelope (see
-`samples/Envelope.Api`).
+`samples/Envelope.Api`). Hlibz.Results also picks the success status code per HTTP method,
+group or endpoint (`204` for every DELETE, `201` with a `Location` for a create; see
+`samples/Todo.Api`).
 
 ## Limitations
 
@@ -375,9 +377,16 @@ ReDoc at `/api-docs`.
 ([Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore)), with the
 envelope documented as the success and error schema.
 
+[`samples/Todo.Api`](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/tree/main/samples/Todo.Api): where this package, Hlibz.Results and
+[Hlibz.OpenApi.AspNetCore](https://www.nuget.org/packages/Hlibz.OpenApi.AspNetCore) meet.
+Handlers return `Result`s as plain bodies, with `204` for every DELETE, `200` for other methods,
+and `201` with a `Location` for the endpoints that create something. The OpenAPI document gets
+strongly typed IDs, rules and XML summaries.
+
 ```bash
 dotnet run --project samples/Library.Api    # http://localhost:5190
 dotnet run --project samples/Envelope.Api   # http://localhost:5191
+dotnet run --project samples/Todo.Api       # http://localhost:5192
 ```
 
 ## Related packages

@@ -2,6 +2,7 @@
   <Folder Name="/samples/">
     <Project Path="samples/Envelope.Api/Envelope.Api.csproj" />
     <Project Path="samples/Library.Api/Library.Api.csproj" />
+    <Project Path="samples/Todo.Api/Todo.Api.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Hlibz.MinimalApi.Endpoints.FluentValidation/Hlibz.MinimalApi.Endpoints.FluentValidation.csproj" />
