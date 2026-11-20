@@ -105,9 +105,11 @@ internal sealed class GeneratorRun
         CSharpParseOptions parseOptions = new(LanguageVersion.CSharp12, documentationMode);
         MetadataReference[] references = referenceLibrary
             ? AllReferences
-            : [.. AllReferences.Where(reference => !reference.Display!.EndsWith(
-                "Hlibz.MinimalApi.Endpoints.dll",
-                StringComparison.Ordinal))];
+            : AllReferences
+                .Where(reference => !reference.Display!.EndsWith(
+                    "Hlibz.MinimalApi.Endpoints.dll",
+                    StringComparison.Ordinal))
+                .ToArray();
         return CSharpCompilation.Create(
             "Generated.Endpoints-1",
             sources.Select((source, index) => CSharpSyntaxTree.ParseText(
