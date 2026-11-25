@@ -37,6 +37,6 @@
         <!-- Samples only (Envelope.Api, Todo.Api): Hlibz.Results' responses. -->
         <PackageVersion Include="Hlibz.Results.AspNetCore" Version="2.1.1" />
         <!-- Samples only (Todo.Api): the OpenAPI document's IDs, rules and XML summaries. -->
-        <PackageVersion Include="Hlibz.OpenApi.AspNetCore" Version="1.0.0" />
+        <PackageVersion Include="Hlibz.OpenApi.AspNetCore" Version="1.1.0" />
     </ItemGroup>
 </Project>
