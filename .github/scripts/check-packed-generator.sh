@@ -22,7 +22,7 @@ trap 'rm -rf "$work"' EXIT
 # Its own package cache: the packed version must never land in the machine-wide one.
 export NUGET_PACKAGES="$work/packages"
 
-# The packages only from the fresh pack; FluentValidation and the .NET 10 reference packs from nuget.org.
+# The packages only from the fresh pack; FluentValidation from nuget.org.
 cat > "$work/nuget.config" <<EOF
 <configuration>
   <packageSources>
@@ -47,7 +47,7 @@ mkdir "$work/Shared" "$work/Api"
 cat > "$work/Shared/Shared.csproj" <<EOF
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -79,7 +79,7 @@ EOF
 cat > "$work/Api/Api.csproj" <<'EOF'
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

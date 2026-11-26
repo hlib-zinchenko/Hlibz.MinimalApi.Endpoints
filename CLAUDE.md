@@ -64,21 +64,19 @@ Born from Lighthouse's `Common.API/Endpoints`; its admin-audience rules are conv
 
 - `samples/Library.Api`: net11.0 only, never packed, references the library projects. Keep its
   `.http` file and `samples/README.md` in step with the responses.
-- `samples/Envelope.Api` (same rules, :5191): handlers return Hlibz.Results' `Result`/`Result<T>`;
-  Hlibz.Results' `WithResultEnvelopes()` (applied in `ConfigureEndpoints`) sends and documents them
-  as envelopes, `UseErrorResponse<ResultEnvelope>()` documents the errors.
-- `samples/Todo.Api` (same rules, :5192): where three packages meet. `Result`s as plain bodies
-  through Hlibz.Results' `WithResultResponses()` and `UseErrorResponse<ErrorResponse>()`;
-  success codes by method (`SuccessStatusCodes[DELETE] = 204` in `Program.cs`) and
-  `WithCreatedLocation` (201 + `Location`) on the create endpoints; Hlibz.OpenApi.AspNetCore's
-  XML documentation, strongly typed IDs, rules and description cleanup on the document. It
-  writes its XML file and copies the packages' (`GenerateDocumentationFile`,
-  `CopyDocumentationFilesFromPackages` in its csproj), unlike the other samples.
+- `samples/TypedErrors.Api` (same rules, :5191): handlers return Hlibz.Results 3.0's
+  `Result<T, TError>` (errors in `Books/BookErrors.cs`, unions in `Books/BookErrorSets.cs`);
+  `WithResultResponses()` (applied in `ConfigureEndpoints`) sends them and documents each declared
+  error's status, `UseErrorResponse<ErrorResponse>()` the 401/403 and the one `ProducesErrors(400)`
+  (the ambient `ValidationFailed`).
+- Samples use only the Hlibz packages they need (Library.Api: Hlibz.Redoc.AspNetCore;
+  TypedErrors.Api: Hlibz.Results.AspNetCore); Hlibz.Stack is where the packages meet. Until the
+  .NET 11 majors ship, `NuGet.config` adds the local folder feed `~/LocalNuGet` for Hlibz.Results
+  3.0.
 
 ## Requires
 
-* The .NET SDK `global.json` pins (11.0.100, patches roll forward; Dependabot bumps it), plus
-  the .NET 10 runtime to run both test targets. Pinned because warnings are errors and
+* The .NET SDK `global.json` pins (11.0.100, patches roll forward; Dependabot bumps it). Pinned because warnings are errors and
   `AnalysisMode=All`: a new SDK feature band brings new analyzer rules.
 
 ## Commands
@@ -86,11 +84,9 @@ Born from Lighthouse's `Common.API/Endpoints`; its admin-audience rules are conv
 ```bash
 dotnet build
 dotnet test
-dotnet test -f net11.0
 dotnet pack -c Release -o ./nupkg
 dotnet run --project samples/Library.Api    # :5190, try Library.Api.http
-dotnet run --project samples/Envelope.Api   # :5191, try Envelope.Api.http
-dotnet run --project samples/Todo.Api       # :5192, try Todo.Api.http
+dotnet run --project samples/TypedErrors.Api   # :5191, try TypedErrors.Api.http
 ```
 
 ## Conventions
@@ -104,9 +100,11 @@ only as in-memory
 sources in `Generators.Tests`. Versions are central
 (`Directory.Packages.props`); the shared NuGet metadata and `Version` live in
 `Directory.Build.props`, release by pushing a `vX.Y.Z` tag (see Releasing).
-Packing runs package validation (`EnablePackageValidation` in `src/Directory.Build.props`), so
-the API must match across target frameworks; add `PackageValidationBaselineVersion` once 1.0.0
-ships.
+Packing runs package validation (`EnablePackageValidation` in `src/Directory.Build.props`).
+
+Targets net11.0 only, from 2.0 (the .NET 11 majors of the Hlibz packages); 1.x targeted net10.0
+and net11.0, and .NET 10 apps stay there. The generator keeps netstandard2.0 and Roslyn 4.8 with
+its own pinned `LangVersion`.
 
 Release policy: both packages always ship together under one version (lockstep).
 FluentValidation stays at the oldest version the add-on supports (11.0.0; Dependabot ignores it).

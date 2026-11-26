@@ -12,9 +12,9 @@
         <PackageVersion Include="FluentValidation" Version="11.0.0" />
         <!--
             The Roslyn the source generator builds against, and so the oldest compiler that can
-            load it: a deliberately low minimum (4.8), far below the .NET 10 SDK's, so every SDK
-            that can build a net10.0 project loads it. Raise it only when the generator needs a
-            newer Roslyn API (Dependabot ignores it).
+            load it: a deliberately low minimum (4.8), far below the .NET 11 SDK's, so every SDK
+            loads it. Raise it only when the generator needs a newer Roslyn API (Dependabot
+            ignores it).
         -->
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
@@ -22,21 +22,13 @@
         <PackageVersion Include="StyleCop.Analyzers" Version="1.3.180" />
         <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
         <PackageVersion Include="xunit.v3" Version="4.0.3" />
-    </ItemGroup>
-
-    <!-- Test-only: an in-memory server per ASP.NET Core major, matching each target framework. -->
-    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.14" />
-    </ItemGroup>
-    <ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
+        <!-- Test-only: an in-memory server. -->
         <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="11.0.0" />
-        <!-- Samples only (net11.0): the OpenAPI document showing what the endpoints document. -->
+        <!-- Samples only: the OpenAPI document showing what the endpoints document. -->
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
-        <!-- Samples only: a ReDoc page rendering that document, at /api-docs. -->
+        <!-- Samples only (Library.Api): a ReDoc page rendering that document, at /api-docs. -->
         <PackageVersion Include="Hlibz.Redoc.AspNetCore" Version="2.5.0" />
-        <!-- Samples only (Envelope.Api, Todo.Api): Hlibz.Results' responses. -->
-        <PackageVersion Include="Hlibz.Results.AspNetCore" Version="2.1.1" />
-        <!-- Samples only (Todo.Api): the OpenAPI document's IDs, rules and XML summaries. -->
-        <PackageVersion Include="Hlibz.OpenApi.AspNetCore" Version="1.1.0" />
+        <!-- Samples only (TypedErrors.Api): Hlibz.Results' responses and typed errors. -->
+        <PackageVersion Include="Hlibz.Results.AspNetCore" Version="3.0.0-preview.1" />
     </ItemGroup>
 </Project>

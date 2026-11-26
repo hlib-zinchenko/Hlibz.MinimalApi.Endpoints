@@ -24,7 +24,7 @@ handler runs, and the failure status is documented. Nothing
 to opt into per endpoint. Which types have a validator is decided when routing first builds
 each endpoint; validators resolve from the request's services, so any lifetime works.
 
-ASP.NET Core 10's `AddValidation()` (DataAnnotations) is a separate filter; with both on,
+ASP.NET Core's `AddValidation()` (DataAnnotations) is a separate filter; with both on,
 both run, so validate a type with one or the other.
 
 A failure is a `400` validation problem by default; answer with your own instead:
@@ -32,7 +32,7 @@ A failure is a `400` validation problem by default; answer with your own instead
 ```csharp
 options.AddFluentValidation(validation =>
 {
-    validation.OnFailure = (result, httpContext) => result.ToErrorResult().ToHttpResult();
+    validation.OnFailure = (result, httpContext) => Result.Failure(result.ToValidationFailed()).ToHttpResult();
     validation.FailureStatusCode = StatusCodes.Status400BadRequest; // what's documented
 });
 ```
@@ -44,6 +44,6 @@ Works with FluentValidation 11.0.0 and later.
 - [Hlibz.MinimalApi.Endpoints](https://www.nuget.org/packages/Hlibz.MinimalApi.Endpoints): the
   endpoints this validates.
 - [Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore): answer a
-  failure with `result.ToErrorResult().ToHttpResult()`, as above.
+  failure with `Result.Failure(result.ToValidationFailed()).ToHttpResult()`, as above.
 
 Full documentation and samples: [github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints).

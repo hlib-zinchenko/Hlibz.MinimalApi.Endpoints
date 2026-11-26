@@ -53,7 +53,8 @@ build error rather than a startup failure.
 - [Hlibz.MinimalApi.Endpoints.FluentValidation](https://www.nuget.org/packages/Hlibz.MinimalApi.Endpoints.FluentValidation):
   request validation with FluentValidation, with its `400` documented.
 - [Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore): one
-  error body for every failure, documented as the endpoints' error schema.
+  error body for every failure, documented as the endpoints' error schema; a handler returning
+  `Result<T, TError>` documents its declared errors itself.
 - [Hlibz.OpenApi.AspNetCore](https://www.nuget.org/packages/Hlibz.OpenApi.AspNetCore): OpenAPI
   transformers for rules, strongly typed IDs and security.
 

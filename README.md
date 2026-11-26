@@ -18,7 +18,7 @@ remembered to write.
 | `Hlibz.MinimalApi.Endpoints` | `IEndpoint<TGroup>`, `IEndpointGroup`, `app.MapEndpoints(assemblies)`, `ProducesErrors`/`ProducesFile`/`AcceptsUpload`, group and endpoint conventions, `EndpointDiscovery`, and the source generator and analyzer that list and check the endpoints at compile time. No dependencies beyond ASP.NET Core. |
 | `Hlibz.MinimalApi.Endpoints.FluentValidation` | `options.AddFluentValidation()`: every handler parameter with a registered `IValidator<T>` is validated before the handler runs. |
 
-Targets .NET 10 and 11.
+Targets .NET 11. .NET 10 apps stay on 1.x.
 
 ## Why
 
@@ -311,7 +311,7 @@ the first read of the OpenAPI document), not during `MapEndpoints`; the validato
 resolved from the request's services, so scoped validators (`AddValidatorsFromAssembly`'s
 default) work.
 
-ASP.NET Core 10's own validation (`builder.Services.AddValidation()`) is a separate filter for
+ASP.NET Core's own validation (`builder.Services.AddValidation()`) is a separate filter for
 DataAnnotations attributes and knows nothing of FluentValidation. Turn both on and both run on
 the same arguments, each answering a failure its own way, so validate a type with one or the
 other.
@@ -321,7 +321,7 @@ A failure answers with a `400` validation problem by default. Answer with your o
 ```csharp
 // With Hlibz.Results.AspNetCore + Hlibz.Results.FluentValidation:
 options.AddFluentValidation(validation =>
-    validation.OnFailure = (result, _) => result.ToErrorResult().ToHttpResult());
+    validation.OnFailure = (result, _) => Result.Failure(result.ToValidationFailed()).ToHttpResult());
 ```
 
 A custom `OnFailure` is documented with the mapping's error schema; set `FailureStatusCode`
@@ -333,29 +333,41 @@ when it isn't `400` (e.g. `422`), or `null` to document nothing. Works with Flue
 [Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore) writes one
 `ErrorResponse` body for every failure, the auth gate's included. Document it as the error
 schema and every documented error matches what the API sends. With `WithResultResponses()` on
-every endpoint, handlers return their `Result` or `Result<T>` as is: each is sent as
-`ToHttpResult()` would send it, and documented as `200` with the value:
+every endpoint, handlers return their result as is: each is sent as `ToHttpResult()` would send
+it, and documented as `200` with the value.
+
+A handler returning Hlibz.Results 3.0's `Result<T, TError>` declares its errors, a C# `union` of
+error types, and that return type documents each one's status: no `ProducesErrors` needed. Keep
+`ProducesErrors` for what no error set declares: an ambient error the handler returns itself
+(`ValidationFailed`), or a handler returning a plain `Result<T>`. This package still adds the
+`401`/`403`/`429` of the gates, with the same body:
 
 ```csharp
 app.MapEndpoints(assemblies, options => options
     .UseErrorResponse<ErrorResponse>()
     .ConfigureEndpoints(endpoint => endpoint.Builder.WithResultResponses())
     .AddFluentValidation(validation =>
-        validation.OnFailure = (result, _) => result.ToErrorResult().ToHttpResult()));
+        validation.OnFailure = (result, _) => Result.Failure(result.ToValidationFailed()).ToHttpResult()));
+
+[Error("library_1001", ResultStatus.NotFound, "The book doesn't exist.")]
+public sealed record BookNotFound(int BookId) : Error;
+
+public union GetBookError(BookNotFound);
 
 internal sealed class GetBookEndpoint : IEndpoint<BooksEndpointGroup>
 {
-    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) =>
-        group.MapGet("{id:int}", Handle).ProducesErrors(StatusCodes.Status404NotFound);
+    // The 404 is documented from GetBookError.
+    public RouteHandlerBuilder Map(IEndpointRouteBuilder group) => group.MapGet("{id:int}", Handle);
 
-    private static Result<Book> Handle(int id, BookStore store) => store.Find(id);
+    private static Result<Book, GetBookError> Handle(int id, BookStore store) =>
+        store.Find(id) is { } book ? book : new BookNotFound(id);
 }
 ```
 
-`WithResultEnvelopes()` does the same for an API whose every response is an envelope (see
-`samples/Envelope.Api`). Hlibz.Results also picks the success status code per HTTP method,
-group or endpoint (`204` for every DELETE, `201` with a `Location` for a create; see
-`samples/Todo.Api`).
+`WithResultEnvelopes()` does the same for an API whose every response is an envelope.
+Hlibz.Results also picks the success status code per HTTP method, group or endpoint (`204` for
+every DELETE, `201` with a `Location` for a create: `WithCreatedLocation`). See
+`samples/TypedErrors.Api`.
 
 ## Limitations
 
@@ -373,20 +385,15 @@ convention, FluentValidation, authorization, rate limiting, an upload and a CSV 
 with a `.http` file for every case and the OpenAPI document at `/openapi/v1.json`, rendered by
 ReDoc at `/api-docs`.
 
-[`samples/Envelope.Api`](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/tree/main/samples/Envelope.Api): an API whose every response is an envelope
-([Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore)), with the
-envelope documented as the success and error schema.
+[`samples/TypedErrors.Api`](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/tree/main/samples/TypedErrors.Api): handlers that declare their errors
+([Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore) 3.0's
+`Result<T, TError>`), each error documented from the return type and sent with its data.
 
-[`samples/Todo.Api`](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/tree/main/samples/Todo.Api): where this package, Hlibz.Results and
-[Hlibz.OpenApi.AspNetCore](https://www.nuget.org/packages/Hlibz.OpenApi.AspNetCore) meet.
-Handlers return `Result`s as plain bodies, with `204` for every DELETE, `200` for other methods,
-and `201` with a `Location` for the endpoints that create something. The OpenAPI document gets
-strongly typed IDs, rules and XML summaries.
+Each sample uses only the Hlibz packages it needs; Hlibz.Stack is where they all meet.
 
 ```bash
-dotnet run --project samples/Library.Api    # http://localhost:5190
-dotnet run --project samples/Envelope.Api   # http://localhost:5191
-dotnet run --project samples/Todo.Api       # http://localhost:5192
+dotnet run --project samples/Library.Api       # http://localhost:5190
+dotnet run --project samples/TypedErrors.Api   # http://localhost:5191
 ```
 
 ## Related packages
@@ -405,7 +412,8 @@ dotnet run --project samples/Todo.Api       # http://localhost:5192
 Every package in this repository is released under one version, from one `vX.Y.Z` tag.
 Dependencies are declared as minimums: FluentValidation 11.0.0 and later, and the source
 generator loads in any compiler from Roslyn 4.8 on, so a newer FluentValidation or SDK needs no
-new release here. Release notes are on
+new release here. 2.0 targets .NET 11 only, like the other Hlibz packages' .NET 11 majors; its
+API is 1.0's. Release notes are on
 [GitHub Releases](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/releases).
 
 ## License

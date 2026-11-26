@@ -1,10 +1,9 @@
 {
   "profiles": {
-    "Todo.Api": {
+    "TypedErrors.Api": {
       "commandName": "Project",
-      "launchBrowser": true,
-      "launchUrl": "api-docs",
-      "applicationUrl": "http://localhost:5192",
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5191",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

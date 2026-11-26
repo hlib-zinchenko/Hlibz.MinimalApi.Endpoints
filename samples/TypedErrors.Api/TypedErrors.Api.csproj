@@ -1,21 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <!--
-    The XML summaries are what the OpenAPI document shows (Hlibz.OpenApi's AddXmlDocumentation),
-    so this sample writes the XML file the other samples don't, and copies the packages' own
-    (Hlibz.Results' ErrorResponse is described from it). A summary is all a sample type needs.
+      Endpoint classes whose handlers declare their errors (Hlibz.Results 3.0's
+      Result<T, TError>): the return type documents each status, Hlibz.Results.AspNetCore sends
+      the result, and this package adds what the return type can't say (401/403, and a
+      ProducesErrors status for an ambient error).
   -->
-  <PropertyGroup>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <CopyDocumentationFilesFromPackages>true</CopyDocumentationFilesFromPackages>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-    <PackageReference Include="Hlibz.Redoc.AspNetCore" />
     <PackageReference Include="Hlibz.Results.AspNetCore" />
-    <PackageReference Include="Hlibz.OpenApi.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,6 +21,11 @@
     <ProjectReference Include="..\..\src\Hlibz.MinimalApi.Endpoints.Generators\Hlibz.MinimalApi.Endpoints.Generators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- The same demo-only header sign-in as Library.Api. -->
+  <ItemGroup>
+    <Compile Include="..\Library.Api\HeaderAuthenticationHandler.cs" Link="HeaderAuthenticationHandler.cs" />
   </ItemGroup>
 
 </Project>

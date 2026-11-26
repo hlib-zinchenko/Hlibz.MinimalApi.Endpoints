@@ -1,0 +1,53 @@
+@host = http://localhost:5191
+
+### A book
+GET {{host}}/api/books/2
+
+### Not found: GetBookError's BookNotFound, its id in details
+### 404 library_1001, details { bookId: 99 }
+GET {{host}}/api/books/99
+
+### Not signed in: 401, the same error body
+POST {{host}}/api/books
+Content-Type: application/json
+
+{ "title": "Solaris", "author": "Stanisław Lem" }
+
+### Invalid: the ambient ValidationFailed, documented by ProducesErrors(400)
+POST {{host}}/api/books
+Content-Type: application/json
+X-User: alice
+X-Role: member
+
+{ "title": "", "author": " " }
+
+### Created: 201, Location /api/books/{id}
+POST {{host}}/api/books
+Content-Type: application/json
+X-User: alice
+X-Role: member
+
+{ "title": "Solaris", "author": "Stanisław Lem" }
+
+### Conflict: AddBookError's BookExists, with the id of the book already there
+### 409 library_1002, details { bookId: 1 }
+POST {{host}}/api/books
+Content-Type: application/json
+X-User: alice
+X-Role: member
+
+{ "title": "dune", "author": "frank herbert" }
+
+### On loan: DeleteBookError's BookOnLoan, with who has it
+### 409 library_1003, details { borrowers: ["alice", "bob"] }
+DELETE {{host}}/api/books/1
+X-User: alice
+X-Role: member
+
+### Deleted: 200, no body
+DELETE {{host}}/api/books/2
+X-User: alice
+X-Role: member
+
+### The OpenAPI document: 404 and 409 from the error sets, 400/401/403 from this package
+GET {{host}}/openapi/v1.json

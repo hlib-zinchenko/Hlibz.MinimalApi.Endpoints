@@ -1,6 +1,6 @@
 using Hlibz.MinimalApi.Endpoints;
 
-namespace Envelope.Api.Books;
+namespace TypedErrors.Api.Books;
 
 internal sealed class BooksEndpointGroup : IEndpointGroup
 {
