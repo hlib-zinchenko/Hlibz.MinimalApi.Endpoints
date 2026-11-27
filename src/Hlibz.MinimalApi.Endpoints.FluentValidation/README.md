@@ -39,11 +39,18 @@ options.AddFluentValidation(validation =>
 
 Works with FluentValidation 11.0.0 and later.
 
-## Related packages
+Targets .NET 11. .NET 10 apps stay on 1.x.
 
-- [Hlibz.MinimalApi.Endpoints](https://www.nuget.org/packages/Hlibz.MinimalApi.Endpoints): the
-  endpoints this validates.
-- [Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore): answer a
-  failure with `Result.Failure(result.ToValidationFailed()).ToHttpResult()`, as above.
+## A family of packages
+
+One of five packages I build to set up new .NET APIs the way I want them: Hlibz.Results,
+Hlibz.UseCases, Hlibz.MinimalApi.Endpoints, Hlibz.OpenApi and Hlibz.Paging. Each works on its own,
+and they work best together, as in [Hlibz.Stack](https://github.com/hlib-zinchenko/Hlibz.Stack). New
+minor and major versions come often, a new major whenever .NET gives me a better way to do
+something. Breaking changes only ever come in a major and are listed first in its
+[release notes](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/releases). You're
+welcome to use the packages, and to
+[open an issue](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/issues) when something
+is wrong or missing.
 
 Full documentation and samples: [github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints).

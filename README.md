@@ -20,6 +20,28 @@ remembered to write.
 
 Targets .NET 11. .NET 10 apps stay on 1.x.
 
+## A family of packages
+
+Hlibz.MinimalApi.Endpoints is one of five packages I build to set up new .NET APIs the way I want
+them: [Hlibz.Results](https://github.com/hlib-zinchenko/Hlibz.Results),
+[Hlibz.UseCases](https://github.com/hlib-zinchenko/Hlibz.UseCases), **Hlibz.MinimalApi.Endpoints**,
+[Hlibz.OpenApi](https://github.com/hlib-zinchenko/Hlibz.OpenApi) and
+[Hlibz.Paging](https://github.com/hlib-zinchenko/Hlibz.Paging). Each one works on its own, and they
+work best together: [Hlibz.Stack](https://github.com/hlib-zinchenko/Hlibz.Stack) is an API where all
+five meet, along with [Hlibz.Redoc](https://github.com/hlib-zinchenko/Hlibz.Redoc) and
+[Hlibz.McpDocs.AspNetCore](https://github.com/hlib-zinchenko/Hlibz.McpDocs.AspNetCore).
+
+Because they follow what my projects need, new minor and major versions come often. When .NET gives
+me a better way to do something, it goes into a new major straight away: Hlibz.Results 2.0 came a
+week after 1.0, and the first 3.0 preview, built on C# 15 unions, nine days after 2.0. Breaking
+changes only ever come in a major, its
+[release notes](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/releases) list them
+first, and older versions stay on NuGet, so read the notes before you move up a major.
+
+You're welcome to use them, and to
+[open an issue](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/issues) when something
+is wrong or missing.
+
 ## Why
 
 Minimal APIs scale badly as one long `Program.cs`, and the usual fix, a `MapOrderEndpoints`
@@ -140,20 +162,20 @@ A group is found through the endpoints that name it, so it can live in any assem
 
 ## Documented responses
 
-* The success response comes from the handler's return type, as ASP.NET Core infers it:
+- The success response comes from the handler's return type, as ASP.NET Core infers it:
   `Ok<OrderDto>` documents `200 OrderDto`, `Created<OrderDto>` `201 OrderDto`, `NoContent`
   `204`, a plain `OrderDto` `200 OrderDto`. A handler returning a bare `IResult` documents
   nothing: add `.Produces<OrderDto>()` in `Map`.
   `ProducesFile` documents a file download.
-* Every `ProducesErrors` status, with the error schema. It replaces a body-less response
+- Every `ProducesErrors` status, with the error schema. It replaces a body-less response
   ASP.NET inferred for the same status (the `NotFound` arm of `Results<Ok<T>, NotFound>`), and
   leaves a response the handler documents with a body of its own (`Conflict<T>`).
-* `401` and `403` whenever the endpoint **ends up** requiring authorization, whatever set it:
+- `401` and `403` whenever the endpoint **ends up** requiring authorization, whatever set it:
   the endpoint, its group, a convention, an outer `MapGroup`, or the app's
   `AuthorizationOptions.FallbackPolicy`. `AllowAnonymous()` turns them off again.
-* `429` whenever the endpoint ends up with a rate limiting policy, or the app has a global
+- `429` whenever the endpoint ends up with a rate limiting policy, or the app has a global
   limiter (`RateLimiterOptions.GlobalLimiter`), and no `DisableRateLimiting()`.
-* `413` on `AcceptsUpload`.
+- `413` on `AcceptsUpload`.
 
 The errors and gate responses are decided in a `Finally` convention, on the endpoint's final metadata, so
 they can't drift from the real behaviour. A status already documented is never added twice.
@@ -266,28 +288,6 @@ a base.
 An assembly passed to `MapEndpoints` that wasn't compiled with the generator fails at startup
 with a message saying so.
 
-## Build errors
-
-An endpoint the generator can't list fails the build, pointing at the class, and so does a
-`Map` the analyzer rejects, pointing at `Map`. Only `HMAE011` is a warning (an
-error too when your project treats warnings as errors):
-
-| Id | Cause |
-|---|---|
-| `HMAE001` | Implements `IEndpoint` directly, without `IEndpoint<TGroup>`. |
-| `HMAE002` | Names more than one group. |
-| `HMAE004` | The endpoint or its group has no public or internal parameterless constructor. |
-| `HMAE005` | The group is an interface or an abstract class. |
-| `HMAE006` | The endpoint or its group is private (or nested in a private type). |
-| `HMAE007` | `Map` doesn't map exactly one route: it must make one call on its group parameter (the group as the first argument) that returns a `RouteHandlerBuilder`, outside loops and lambdas, and use the parameter nowhere else (no `MapGroup`). That's `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods`, or a helper or extension that maps one route, such as `MapErrorCodes()`; the analyzer can't see inside a helper, so one that maps several routes and returns the last one's builder isn't caught. |
-| `HMAE010` | The endpoint is a struct (a `record struct` too); endpoints are classes. |
-| `HMAE011` | **Warning.** The endpoint is generic, or nested in a generic type, so it is never mapped. Make it `abstract` if it is a base for endpoints, and derive non-generic endpoints from it. |
-
-`HMAE003`, `HMAE008` and `HMAE009` are retired: they checked `IEndpoint<TGroup, TResponse>`,
-which is gone. Delete any `#pragma warning disable HMAE009` left from an earlier preview.
-
-A `Map` inherited from a base class in another assembly isn't analysed.
-
 ## FluentValidation
 
 ```bash
@@ -369,52 +369,62 @@ Hlibz.Results also picks the success status code per HTTP method, group or endpo
 every DELETE, `201` with a `Location` for a create: `WithCreatedLocation`). See
 `samples/TypedErrors.Api`.
 
+## Build errors
+
+An endpoint the generator can't list fails the build, pointing at the class, and so does a
+`Map` the analyzer rejects, pointing at `Map`. Only `HMAE011` is a warning (an
+error too when your project treats warnings as errors):
+
+| Id | Cause |
+|---|---|
+| `HMAE001` | Implements `IEndpoint` directly, without `IEndpoint<TGroup>`. |
+| `HMAE002` | Names more than one group. |
+| `HMAE004` | The endpoint or its group has no public or internal parameterless constructor. |
+| `HMAE005` | The group is an interface or an abstract class. |
+| `HMAE006` | The endpoint or its group is private (or nested in a private type). |
+| `HMAE007` | `Map` doesn't map exactly one route: it must make one call on its group parameter (the group as the first argument) that returns a `RouteHandlerBuilder`, outside loops and lambdas, and use the parameter nowhere else (no `MapGroup`). That's `MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods`, or a helper or extension that maps one route, such as `MapErrorCodes()`; the analyzer can't see inside a helper, so one that maps several routes and returns the last one's builder isn't caught. |
+| `HMAE010` | The endpoint is a struct (a `record struct` too); endpoints are classes. |
+| `HMAE011` | **Warning.** The endpoint is generic, or nested in a generic type, so it is never mapped. Make it `abstract` if it is a base for endpoints, and derive non-generic endpoints from it. |
+
+`HMAE003`, `HMAE008` and `HMAE009` are retired: they checked `IEndpoint<TGroup, TResponse>`,
+which is gone. Delete any `#pragma warning disable HMAE009` left from an earlier preview.
+
+A `Map` inherited from a base class in another assembly isn't analysed.
+
 ## Limitations
 
-* Discovery is trimming- and Native AOT-safe, but mapping isn't proven to be: each handler is
+- Discovery is trimming- and Native AOT-safe, but mapping isn't proven to be: each handler is
   bound by the `MapGet`/`MapPost` call inside the endpoint's own `Map`, through
   `RequestDelegateFactory` unless ASP.NET Core's Request Delegate Generator intercepts that
   call. Until that is verified, `MapEndpoints` carries `RequiresUnreferencedCode` and
   `RequiresDynamicCode`.
-* Endpoints are singletons created at startup: no constructor injection.
+- Endpoints are singletons created at startup: no constructor injection.
 
 ## Samples
 
-[`samples/Library.Api`](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/tree/main/samples/Library.Api): public and admin groups, a group
+[`samples/Library.Api`](samples/Library.Api): public and admin groups, a group
 convention, FluentValidation, authorization, rate limiting, an upload and a CSV download,
 with a `.http` file for every case and the OpenAPI document at `/openapi/v1.json`, rendered by
 ReDoc at `/api-docs`.
 
-[`samples/TypedErrors.Api`](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/tree/main/samples/TypedErrors.Api): handlers that declare their errors
+[`samples/TypedErrors.Api`](samples/TypedErrors.Api): handlers that declare their errors
 ([Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore) 3.0's
 `Result<T, TError>`), each error documented from the return type and sent with its data.
-
-Each sample uses only the Hlibz packages it needs; Hlibz.Stack is where they all meet.
 
 ```bash
 dotnet run --project samples/Library.Api       # http://localhost:5190
 dotnet run --project samples/TypedErrors.Api   # http://localhost:5191
 ```
 
-## Related packages
-
-- [Hlibz.Results.AspNetCore](https://www.nuget.org/packages/Hlibz.Results.AspNetCore): one
-  error body for every failure, the auth gate's included (see
-  [Using it with Hlibz.Results](#using-it-with-hlibzresults)).
-- [Hlibz.OpenApi.AspNetCore](https://www.nuget.org/packages/Hlibz.OpenApi.AspNetCore): OpenAPI
-  transformers (rules, strongly typed IDs, security, validation problems); its `Atlas.Api`
-  sample is built on this package.
-- [Hlibz.Paging](https://www.nuget.org/packages/Hlibz.Paging): paging and sorting for list
-  endpoints.
-
 ## Versioning
 
-Every package in this repository is released under one version, from one `vX.Y.Z` tag.
-Dependencies are declared as minimums: FluentValidation 11.0.0 and later, and the source
-generator loads in any compiler from Roslyn 4.8 on, so a newer FluentValidation or SDK needs no
-new release here. 2.0 targets .NET 11 only, like the other Hlibz packages' .NET 11 majors; its
-API is 1.0's. Release notes are on
-[GitHub Releases](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/releases).
+Every package in this repository is released under one version, from one `vX.Y.Z` tag. Dependencies
+are declared as minimums: FluentValidation 11.0.0 and later, and the source generator loads in any
+compiler from Roslyn 4.8 on, so a newer FluentValidation or SDK needs no new release here. 2.0
+targets .NET 11 only, like the other Hlibz packages' .NET 11 majors; its API is 1.0's.
+
+Release notes: [GitHub
+Releases](https://github.com/hlib-zinchenko/Hlibz.MinimalApi.Endpoints/releases).
 
 ## License
 
