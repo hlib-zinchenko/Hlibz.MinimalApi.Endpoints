@@ -29,6 +29,6 @@
         <!-- Samples only (Library.Api): a ReDoc page rendering that document, at /api-docs. -->
         <PackageVersion Include="Hlibz.Redoc.AspNetCore" Version="2.5.0" />
         <!-- Samples only (TypedErrors.Api): Hlibz.Results' responses and typed errors. -->
-        <PackageVersion Include="Hlibz.Results.AspNetCore" Version="3.0.0-preview.1" />
+        <PackageVersion Include="Hlibz.Results.AspNetCore" Version="3.0.0-preview.2" />
     </ItemGroup>
 </Project>

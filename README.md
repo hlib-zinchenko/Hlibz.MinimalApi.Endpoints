@@ -339,7 +339,9 @@ it, and documented as `200` with the value.
 A handler returning Hlibz.Results 3.0's `Result<T, TError>` declares its errors, a C# `union` of
 error types, and that return type documents each one's status: no `ProducesErrors` needed. Keep
 `ProducesErrors` for what no error set declares: an ambient error the handler returns itself
-(`ValidationFailed`), or a handler returning a plain `Result<T>`. This package still adds the
+(`ValidationFailed`), or a handler returning a plain `Result<T>`. A handler that sends its result
+itself (an `IResult`, such as a file or `ToHttpResult()`) declares its set with Hlibz.Results'
+`.ProducesErrorSet<TErrorSet>()` in `Map`. This package still adds the
 `401`/`403`/`429` of the gates, with the same body:
 
 ```csharp
