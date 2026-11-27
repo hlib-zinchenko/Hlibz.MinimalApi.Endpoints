@@ -70,9 +70,7 @@ Born from Lighthouse's `Common.API/Endpoints`; its admin-audience rules are conv
   error's status, `UseErrorResponse<ErrorResponse>()` the 401/403 and the one `ProducesErrors(400)`
   (the ambient `ValidationFailed`).
 - Samples use only the Hlibz packages they need (Library.Api: Hlibz.Redoc.AspNetCore;
-  TypedErrors.Api: Hlibz.Results.AspNetCore); Hlibz.Stack is where the packages meet. Until the
-  .NET 11 majors ship, `NuGet.config` adds the local folder feed `~/LocalNuGet` for Hlibz.Results
-  3.0.
+  TypedErrors.Api: Hlibz.Results.AspNetCore); Hlibz.Stack is where the packages meet.
 
 ## Requires
 

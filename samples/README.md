@@ -84,6 +84,3 @@ dotnet run --project samples/TypedErrors.Api    # http://localhost:5191
 the OpenAPI document is at `/openapi/v1.json`. Every error is Hlibz.Results' `ErrorResponse` there;
 [Hlibz.OpenApi.Results](https://www.nuget.org/packages/Hlibz.OpenApi.Results) would give each
 error its own body, which Hlibz.Stack shows.
-
-Until the .NET 11 majors ship, Hlibz.Results 3.0 comes from the local folder feed
-`~/LocalNuGet` (`NuGet.config`).
